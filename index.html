@@ -1,0 +1,736 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SunShield Controle de Horas</title>
+    <link rel="icon" href="https://i.postimg.cc/V6HS85m6/SUN-CONTROL-removebg.png" type="image/png">
+    
+    <!-- Google Fonts: Poppins -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Feather Icons -->
+    <script src="https://unpkg.com/feather-icons"></script>
+
+    <!-- Flatpickr (APENAS para Data) -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="https://npmcdn.com/flatpickr/dist/l10n/pt.js"></script>
+
+    <!-- Firebase SDKs (v9 Compat) -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+
+    <style>
+        /*-------------------------------------------------------------------*/
+        /* 1. CONFIGURAÇÃO GLOBAL E VARIÁVEIS DE TEMA
+        /*-------------------------------------------------------------------*/
+        :root {
+            --font-family: 'Poppins', sans-serif;
+            --transition-speed: 0.3s;
+            --border-radius: 12px;
+        }
+
+        /* Tema Escuro Refinado (Padrão) */
+        body, body.dark-theme {
+            --bg-primary: #111827;
+            --bg-secondary: #1f2937;
+            --bg-tertiary: rgba(31, 41, 55, 0.7);
+            --accent-primary: #00ddc6;
+            --accent-secondary: #8e44ad;
+            --text-primary: #f9fafb;
+            --text-secondary: #9ca3af;
+            --border-color: rgba(107, 114, 128, 0.3);
+            --shadow-color: rgba(0, 0, 0, 0.2);
+            --success-color: #34d399;
+            --error-color: #f87171;
+            --warning-color: #fbbf24;
+        }
+
+        /* Tema Claro */
+        body.light-theme {
+            --bg-primary: #f4f7fc;
+            --bg-secondary: #ffffff;
+            --bg-tertiary: rgba(255, 255, 255, 0.7);
+            --accent-primary: #3498db;
+            --accent-secondary: #8e44ad;
+            --text-primary: #2c3e50;
+            --text-secondary: #7f8c8d;
+            --border-color: #e0e0e0;
+            --shadow-color: rgba(0, 0, 0, 0.08);
+            --success-color: #27ae60;
+            --error-color: #c0392b;
+            --warning-color: #f39c12;
+        }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
+
+        /*-------------------------------------------------------------------*/
+        /* 2. ESTILOS BASE E RESET
+        /*-------------------------------------------------------------------*/
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html { scroll-behavior: smooth; }
+        body {
+            font-family: var(--font-family);
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            overflow-x: hidden;
+            transition: background-color var(--transition-speed), color var(--transition-speed);
+        }
+
+        /*-------------------------------------------------------------------*/
+        /* 3. PÁGINAS E LAYOUT
+        /*-------------------------------------------------------------------*/
+        .page { display: none; }
+        .page.active { animation: fadeIn 0.5s ease-out; }
+        #app-page.active, #admin-page.active { display: block; }
+        .auth-container.active { display: flex; }
+
+        .auth-container { justify-content: center; align-items: center; min-height: 100vh; padding: 2rem; }
+        .auth-card { width: 100%; max-width: 450px; text-align: center; }
+        .auth-card .logo { justify-content: center; margin-bottom: 1rem; }
+        .auth-card h2 { margin-bottom: 0.5rem; font-size: 1.8rem; }
+        .auth-card p { color: var(--text-secondary); margin-bottom: 2rem; }
+        .auth-card .form-footer { margin-top: 1.5rem; }
+        .auth-card .form-footer a { color: var(--accent-primary); text-decoration: none; font-weight: 500; cursor: pointer; }
+
+        .app-container { padding: 2rem; max-width: 1800px; margin: 0 auto; }
+        header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem; }
+        .logo { display: flex; align-items: center; gap: 0.8rem; }
+        .logo img { height: 40px; }
+        .logo h1 { font-size: 1.8rem; font-weight: 600; color: var(--text-primary); }
+        .main-content { display: grid; grid-template-columns: 2fr 1.2fr; gap: 2rem; flex-grow: 1; }
+
+        /*-------------------------------------------------------------------*/
+        /* 4. COMPONENTES DE UI
+        /*-------------------------------------------------------------------*/
+        .btn { display: inline-flex; justify-content: center; align-items: center; gap: 0.5rem; padding: 0.75rem 1.5rem; border: none; border-radius: var(--border-radius); font-family: var(--font-family); font-weight: 500; font-size: 0.9rem; cursor: pointer; transition: all var(--transition-speed) ease; text-decoration: none; width: 100%; }
+        .btn-inline { width: auto; }
+        .btn-primary { background: var(--accent-primary); color: var(--bg-primary); box-shadow: 0 4px 15px var(--shadow-color); }
+        .btn-primary:hover { transform: translateY(-3px); filter: brightness(1.1); }
+        .btn-secondary { background-color: var(--bg-secondary); color: var(--text-primary); border: 1px solid var(--border-color); }
+        .btn-secondary:hover { background-color: var(--border-color); }
+
+        .card { background-color: var(--bg-secondary); padding: 1.5rem; border-radius: var(--border-radius); border: 1px solid var(--border-color); box-shadow: 0 4px 12px 0 var(--shadow-color); transition: all var(--transition-speed) ease; }
+        .card:hover { transform: translateY(-5px); box-shadow: 0 8px 20px 0 var(--shadow-color); }
+
+        .input-group { margin-bottom: 1rem; text-align: left; position: relative; }
+        .input-group label { display: block; margin-bottom: 0.5rem; font-weight: 500; color: var(--text-secondary); }
+        .input-group input { width: 100%; padding: 0.75rem; background-color: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 8px; color: var(--text-primary); font-family: var(--font-family); transition: border-color var(--transition-speed) ease; }
+        .input-group input:focus { outline: none; border-color: var(--accent-primary); box-shadow: 0 0 0 3px var(--shadow-color); }
+        
+        .theme-switcher { background: none; border: none; cursor: pointer; color: var(--text-secondary); padding: 0.5rem; }
+        .theme-switcher:hover { color: var(--accent-primary); }
+
+        .alert { padding: 1rem; margin-bottom: 1rem; border-radius: 8px; display: none; text-align: left; }
+        .alert.error { background-color: rgba(248, 113, 113, 0.1); color: var(--error-color); border: 1px solid var(--error-color); }
+        .alert.success { background-color: rgba(52, 211, 153, 0.1); color: var(--success-color); border: 1px solid var(--success-color); }
+        .alert.warning { background-color: rgba(251, 191, 36, 0.1); color: var(--warning-color); border: 1px solid var(--warning-color); }
+
+        /*-------------------------------------------------------------------*/
+        /* 5. TABELA, DASHBOARD E MODAIS
+        /*-------------------------------------------------------------------*/
+        .table-wrapper { overflow-x: auto; flex-grow: 1; }
+        .entries-table { width: 100%; border-collapse: collapse; }
+        .entries-table th, .entries-table td { padding: 1rem; text-align: left; border-bottom: 1px solid var(--border-color); }
+        .entries-table th { color: var(--text-secondary); font-weight: 600; text-transform: uppercase; font-size: 0.8rem; }
+        .entries-table tbody tr { transition: background-color var(--transition-speed) ease; }
+        .entries-table tbody tr:hover { background-color: var(--border-color); }
+        .entries-table .actions-cell { display: flex; gap: 0.75rem; }
+        .entries-table .action-icon { cursor: pointer; color: var(--text-secondary); transition: color var(--transition-speed) ease; }
+        .entries-table .action-icon:hover { color: var(--accent-primary); }
+        .entries-table .action-icon.delete:hover { color: var(--error-color); }
+
+        .dashboard { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; align-content: start; }
+        .metric-card { position: relative; padding: 1.5rem; }
+        .metric-card h3 { font-size: 0.9rem; font-weight: 500; color: var(--text-secondary); margin-bottom: 0.5rem; }
+        .metric-card .value { font-size: 1.8rem; font-weight: 600; color: var(--text-primary); letter-spacing: 1px; }
+        .metric-card.positive .value { color: var(--success-color); }
+        .metric-card.negative .value { color: var(--error-color); }
+        .metric-card .icon { position: absolute; top: 1.5rem; right: 1.5rem; color: var(--border-color); }
+        .days-summary-card { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(3, 1fr); text-align: center; padding: 1rem; }
+        .holiday-card { grid-column: 1 / -1; }
+        .holiday-list { list-style: none; padding-top: 0.5rem; max-height: 150px; overflow-y: auto; }
+        .holiday-list li { display: flex; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid var(--border-color); font-size: 0.9rem; }
+        .holiday-list li:last-child { border-bottom: none; }
+        .holiday-list .date { color: var(--accent-primary); font-weight: 500; }
+
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.7); display: none; justify-content: center; align-items: center; z-index: 1000; opacity: 0; transition: opacity var(--transition-speed) ease; }
+        .modal-overlay.visible { display: flex; opacity: 1; }
+        body.dark-theme .modal-overlay { backdrop-filter: blur(8px); }
+        .modal-content { background: var(--bg-secondary); padding: 2.5rem; border-radius: var(--border-radius); width: 90%; max-width: 600px; border: 1px solid var(--border-color); transform: scale(0.95); transition: transform var(--transition-speed) ease; }
+        .modal-content.modal-lg { max-width: 1200px; }
+        .modal-overlay.visible .modal-content { transform: scale(1); }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
+        .close-modal { cursor: pointer; color: var(--text-secondary); transition: color var(--transition-speed) ease, transform var(--transition-speed) ease; }
+        .close-modal:hover { color: var(--accent-primary); transform: rotate(90deg); }
+        .modal-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+
+        /*-------------------------------------------------------------------*/
+        /* 6. SELETOR DE HORÁRIO CUSTOMIZADO
+        /*-------------------------------------------------------------------*/
+        .time-picker {
+            position: absolute;
+            background-color: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius);
+            box-shadow: 0 8px 20px 0 var(--shadow-color);
+            z-index: 1001;
+            display: none;
+            width: 200px;
+            height: 250px;
+            overflow: hidden;
+            flex-direction: row;
+        }
+        .time-picker.visible { display: flex; }
+        .time-picker-column {
+            width: 50%;
+            height: 100%;
+            overflow-y: auto;
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        .time-picker-column::-webkit-scrollbar { display: none; }
+        .time-picker-column:first-child { border-right: 1px solid var(--border-color); }
+        .time-picker-item {
+            padding: 0.75rem;
+            text-align: center;
+            cursor: pointer;
+            transition: background-color var(--transition-speed);
+        }
+        .time-picker-item:hover { background-color: var(--border-color); }
+        .time-picker-item.selected { background-color: var(--accent-primary); color: var(--bg-primary); font-weight: 600; }
+
+        /*-------------------------------------------------------------------*/
+        /* 7. ADMIN VIEW
+        /*-------------------------------------------------------------------*/
+        .user-list { list-style: none; }
+        .user-list-item { display: flex; justify-content: space-between; align-items: center; padding: 1rem; border-radius: var(--border-radius); transition: background-color var(--transition-speed) ease; cursor: pointer; }
+        .user-list-item:hover { background-color: var(--border-color); }
+        .user-info .email { font-size: 0.8rem; color: var(--text-secondary); }
+        .user-role { background-color: var(--accent-primary); color: var(--bg-primary); padding: 0.2rem 0.6rem; border-radius: 20px; font-size: 0.7rem; font-weight: 600; }
+        #user-details-content .main-content { grid-template-columns: 1.5fr 1fr; }
+
+        /*-------------------------------------------------------------------*/
+        /* 8. RESPONSIVIDADE
+        /*-------------------------------------------------------------------*/
+        @media (max-width: 1200px) { .main-content, #user-details-content .main-content { grid-template-columns: 1fr; } }
+        @media (max-width: 768px) { .app-container { padding: 1rem; } header { flex-direction: column; align-items: stretch; } .dashboard { grid-template-columns: 1fr 1fr; } .modal-grid { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+
+    <!-- PÁGINA DE LOGIN -->
+    <div id="login-page" class="page auth-container">
+        <div class="card auth-card">
+            <div class="logo">
+                <img src="https://i.postimg.cc/V6HS85m6/SUN-CONTROL-removebg.png" alt="SunShield Logo">
+                <h1>SunShield</h1>
+            </div>
+            <h2>Bem-vindo de volta!</h2>
+            <p>Faça login para acessar seu painel de horas.</p>
+            <form id="login-form">
+                <div id="login-alert" class="alert"></div>
+                <div class="input-group"><label for="login-email">Email</label><input type="email" id="login-email" required></div>
+                <div class="input-group"><label for="login-password">Senha</label><input type="password" id="login-password" required></div>
+                <button type="submit" class="btn btn-primary">Entrar</button>
+            </form>
+            <div class="form-footer">
+                <a id="show-forgot-password">Esqueceu a senha?</a> | <a id="show-register">Não tem uma conta? Crie agora</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- PÁGINA DE REGISTRO -->
+    <div id="register-page" class="page auth-container">
+        <div class="card auth-card">
+             <div class="logo"><img src="https://i.postimg.cc/V6HS85m6/SUN-CONTROL-removebg.png" alt="SunShield Logo"><h1>SunShield</h1></div>
+            <h2>Crie sua Conta</h2>
+            <p>Comece a monitorar seu tempo com precisão.</p>
+            <form id="register-form">
+                <div id="register-alert" class="alert"></div>
+                <div class="input-group"><label for="register-name">Nome Completo</label><input type="text" id="register-name" required></div>
+                <div class="input-group"><label for="register-email">Email</label><input type="email" id="register-email" required></div>
+                <div class="input-group"><label for="register-password">Senha</label><input type="password" id="register-password" required></div>
+                <button type="submit" class="btn btn-primary">Registrar</button>
+            </form>
+            <div class="form-footer">
+                <a id="show-login-from-register">Já tem uma conta? Faça login</a>
+            </div>
+        </div>
+    </div>
+    
+    <!-- PÁGINA DE ESQUECI A SENHA -->
+    <div id="forgot-password-page" class="page auth-container">
+        <div class="card auth-card">
+             <div class="logo"><img src="https://i.postimg.cc/V6HS85m6/SUN-CONTROL-removebg.png" alt="SunShield Logo"><h1>SunShield</h1></div>
+            <h2>Recuperar Senha</h2>
+            <p>Insira seu email e enviaremos um link para redefinir sua senha.</p>
+            <form id="forgot-password-form">
+                <div id="forgot-alert" class="alert"></div>
+                <div class="input-group"><label for="forgot-email">Email</label><input type="email" id="forgot-email" required></div>
+                <button type="submit" class="btn btn-primary">Enviar Link</button>
+            </form>
+            <div class="form-footer">
+                <a id="show-login-from-forgot">Voltar para o Login</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- PÁGINA DO FUNCIONÁRIO -->
+    <div id="app-page" class="page">
+        <div class="app-container">
+            <header>
+                <div class="logo">
+                     <img src="https://i.postimg.cc/V6HS85m6/SUN-CONTROL-removebg.png" alt="SunShield Logo">
+                    <h1>SunShield Controle de Horas</h1>
+                </div>
+                <div class="header-actions">
+                    <button class="theme-switcher"></button>
+                    <button class="btn btn-inline btn-secondary" id="open-settings-modal" title="Configurações"><i data-feather="settings"></i></button>
+                    <button class="btn btn-inline btn-secondary" id="open-bonified-modal" title="Adicionar Horas Abonadas"><i data-feather="gift"></i></button>
+                    <button class="btn btn-inline btn-primary" id="add-entry-btn" title="Novo Lançamento"><i data-feather="plus-circle"></i></button>
+                    <button class="btn btn-inline btn-secondary" id="logout-btn" title="Sair"><i data-feather="log-out"></i></button>
+                </div>
+            </header>
+            <main class="main-content">
+                <section class="entries-section card">
+                    <div class="table-wrapper">
+                        <table class="entries-table">
+                            <thead>
+                                <tr><th>Data</th><th>Entrada</th><th>Saída</th><th>Duração</th><th>Ações</th></tr>
+                            </thead>
+                            <tbody id="entries-tbody"></tbody>
+                        </table>
+                    </div>
+                </section>
+                <aside class="dashboard">
+                    <div class="metric-card" id="time-balance-card">
+                        <i class="icon" data-feather="briefcase"></i><h3>Banco de Horas Total</h3><div class="value" id="time-balance">00:00</div>
+                    </div>
+                    <div class="metric-card">
+                        <i class="icon" data-feather="clock"></i><h3>Horas Trabalhadas (Mês)</h3><div class="value" id="worked-hours">00:00</div>
+                    </div>
+                    <div class="metric-card">
+                        <i class="icon" data-feather="target"></i><h3>Horas Esperadas (Mês)</h3><div class="value" id="expected-hours">00:00</div>
+                    </div>
+                    <div class="metric-card">
+                        <i class="icon" data-feather="archive"></i><h3>Banco Mês Anterior</h3><div class="value" id="prev-month-balance">00:00</div>
+                    </div>
+                    <div class="metric-card">
+                        <i class="icon" data-feather="gift"></i><h3>Horas Abonadas (Mês)</h3><div class="value" id="bonified-hours-display">00:00</div>
+                    </div>
+                    <div class="metric-card positive">
+                        <i class="icon" data-feather="trending-up"></i><h3>Saldo do Mês</h3><div class="value" id="current-month-balance">00:00</div>
+                    </div>
+                    <div class="card days-summary-card">
+                        <div><h3>Dias Cumpridos</h3><div class="value" id="days-completed">0</div></div>
+                        <div><h3>Dias Totais</h3><div class="value" id="days-total">0</div></div>
+                        <div><h3>Dias Restantes</h3><div class="value" id="days-remaining">0</div></div>
+                    </div>
+                    <div class="card holiday-card">
+                        <h3>Próximos Feriados</h3>
+                        <ul id="holiday-list" class="holiday-list"></ul>
+                    </div>
+                </aside>
+            </main>
+        </div>
+    </div>
+    
+    <!-- PÁGINA DO ADMIN -->
+    <div id="admin-page" class="page">
+        <div class="app-container">
+            <header>
+                 <div class="logo">
+                     <img src="https://i.postimg.cc/V6HS85m6/SUN-CONTROL-removebg.png" alt="SunShield Logo">
+                    <h1>Painel do Administrador</h1>
+                </div>
+                <div class="header-actions">
+                    <button class="theme-switcher"></button>
+                    <button class="btn btn-inline btn-secondary" id="admin-logout-btn" title="Sair"><i data-feather="log-out"></i></button>
+                </div>
+            </header>
+            <main>
+                <section class="card">
+                    <h2>Funcionários</h2>
+                    <ul id="user-list" class="user-list">
+                        <!-- Lista de usuários será populada aqui -->
+                    </ul>
+                </section>
+            </main>
+        </div>
+    </div>
+
+    <!-- MODAIS -->
+    <div class="modal-overlay" id="add-entry-modal">
+        <div class="modal-content">
+            <div class="modal-header"><h2 id="entry-modal-title">Novo Período de Trabalho</h2><i data-feather="x" class="close-modal"></i></div>
+            <form id="add-entry-form">
+                <input type="hidden" id="entry-id">
+                <div id="add-entry-alert" class="alert"></div>
+                <div class="input-group"><label for="date-input">Data</label><input type="text" id="date-input" required placeholder="Selecione uma data..."></div>
+                <div class="modal-grid">
+                    <div class="input-group"><label for="start-time-input">Entrada</label><input type="text" id="start-time-input" class="time-input" readonly required></div>
+                    <div class="input-group"><label for="end-time-input">Saída</label><input type="text" id="end-time-input" class="time-input" readonly required></div>
+                </div>
+                <button type="submit" class="btn btn-primary">Salvar</button>
+            </form>
+        </div>
+    </div>
+    
+    <div class="modal-overlay" id="settings-modal">
+        <div class="modal-content">
+            <div class="modal-header"><h2>Configurações</h2><i data-feather="x" class="close-modal"></i></div>
+            <form id="settings-form">
+                <div class="input-group"><label for="daily-workload">Carga Horária Diária (Ex: 8 para 8h, 6.5 para 6h30)</label><input type="number" id="daily-workload" step="0.1" min="1" required></div>
+                <button type="submit" class="btn btn-primary">Salvar Configurações</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="bonified-modal">
+        <div class="modal-content">
+            <div class="modal-header"><h2>Adicionar Horas Abonadas</h2><i data-feather="x" class="close-modal"></i></div>
+            <form id="bonified-form">
+                <div class="input-group"><label for="bonified-hours-input">Horas a Adicionar (HH:MM)</label><input type="text" id="bonified-hours-input" class="time-input" readonly placeholder="00:00" required></div>
+                <div class="input-group"><label for="bonified-description">Descrição (Opcional)</label><input type="text" id="bonified-description" placeholder="Ex: Compensação feriado X"></div>
+                <button type="submit" class="btn btn-primary">Adicionar Bônus</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="user-details-modal">
+        <div class="modal-content modal-lg">
+            <div class="modal-header">
+                <h2 id="user-details-title">Detalhes do Funcionário</h2>
+                <i data-feather="x" class="close-modal"></i>
+            </div>
+            <div id="user-details-content">
+                <!-- Conteúdo dinâmico do dashboard do usuário -->
+            </div>
+        </div>
+    </div>
+
+
+    <script>
+    // PONTO DE INTEGRAÇÃO FIREBASE: Insira sua configuração do Firebase aqui
+    const firebaseConfig = {
+        apiKey: "AIzaSyAMdc9DWxU0P3OEjGglMVwNbyrB-rwySSw",
+        authDomain: "sunwork-15a7b.firebaseapp.com",
+        projectId: "sunwork-15a7b",
+        storageBucket: "sunwork-15a7b.firebasestorage.app",
+        messagingSenderId: "1096734655719",
+        appId: "1:1096734655719:web:1cdffb2241542d000cce42",
+        measurementId: "G-EK7NXGM4EV"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.firestore();
+
+    document.addEventListener('DOMContentLoaded', () => {
+        const pages = document.querySelectorAll('.page');
+        const showPage = (pageId) => {
+            pages.forEach(page => page.classList.toggle('active', page.id === pageId));
+            feather.replace();
+        };
+        
+        showPage('login-page');
+
+        document.getElementById('show-register').addEventListener('click', (e) => { e.preventDefault(); showPage('register-page'); });
+        document.getElementById('show-forgot-password').addEventListener('click', (e) => { e.preventDefault(); showPage('forgot-password-page'); });
+        document.getElementById('show-login-from-register').addEventListener('click', (e) => { e.preventDefault(); showPage('login-page'); });
+        document.getElementById('show-login-from-forgot').addEventListener('click', (e) => { e.preventDefault(); showPage('login-page'); });
+        
+        const applyTheme = (theme) => {
+            document.body.className = theme;
+            document.querySelectorAll('.theme-switcher').forEach(switcher => {
+                switcher.innerHTML = theme === 'dark-theme' ? '<i data-feather="sun"></i>' : '<i data-feather="moon"></i>';
+            });
+            feather.replace();
+        };
+
+        const setupThemeSwitcher = () => {
+            let currentTheme = localStorage.getItem('sunshieldTheme') || 'dark-theme';
+            applyTheme(currentTheme);
+            document.querySelectorAll('.theme-switcher').forEach(switcher => {
+                switcher.addEventListener('click', () => {
+                    currentTheme = document.body.classList.contains('dark-theme') ? 'light-theme' : 'dark-theme';
+                    applyTheme(currentTheme);
+                    localStorage.setItem('sunshieldTheme', currentTheme);
+                    if(auth.currentUser) {
+                        db.collection('users').doc(auth.currentUser.uid).update({ theme: currentTheme }).catch(console.error);
+                    }
+                });
+            });
+        };
+        setupThemeSwitcher();
+
+        const showAlert = (alertId, message, type = 'error') => {
+            const alertEl = document.getElementById(alertId);
+            alertEl.textContent = message;
+            alertEl.className = `alert ${type}`;
+            alertEl.style.display = 'block';
+        };
+        const hideAlert = (alertId) => {
+            const alertEl = document.getElementById(alertId);
+            if (alertEl) alertEl.style.display = 'none';
+        };
+
+        document.getElementById('login-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            hideAlert('login-alert');
+            auth.signInWithEmailAndPassword(
+                document.getElementById('login-email').value,
+                document.getElementById('login-password').value
+            ).catch(err => showAlert('login-alert', `Erro: ${err.message}`));
+        });
+        
+        document.getElementById('register-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            hideAlert('register-alert');
+            const name = document.getElementById('register-name').value.trim();
+            const email = document.getElementById('register-email').value;
+            const password = document.getElementById('register-password').value;
+
+            if (name.split(' ').length < 2) {
+                showAlert('register-alert', 'Por favor, insira seu nome completo (mínimo 2 nomes).');
+                return;
+            }
+            
+            auth.createUserWithEmailAndPassword(email, password)
+                .then(cred => db.collection('users').doc(cred.user.uid).set({
+                    name, email, theme: 'dark-theme', role: 'employee',
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    trackerData: {
+                        entries: [],
+                        settings: { dailyWorkload: 8 },
+                        bonuses: []
+                    }
+                }))
+                .catch(err => showAlert('register-alert', `Erro: ${err.message}`));
+        });
+
+        document.getElementById('forgot-password-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            hideAlert('forgot-alert');
+            auth.sendPasswordResetEmail(document.getElementById('forgot-email').value)
+                .then(() => showAlert('forgot-alert', 'Link de recuperação enviado para seu email!', 'success'))
+                .catch(err => showAlert('forgot-alert', `Erro: ${err.message}`));
+        });
+        
+        const logout = () => {
+            if (window.appInstance) { window.appInstance.cleanup(); window.appInstance = null; }
+            if (window.adminInstance) { window.adminInstance.cleanup(); window.adminInstance = null; }
+            auth.signOut();
+        };
+        document.getElementById('logout-btn').addEventListener('click', logout);
+        document.getElementById('admin-logout-btn').addEventListener('click', logout);
+
+        auth.onAuthStateChanged(user => {
+            if (user) {
+                db.collection('users').doc(user.uid).get().then(doc => {
+                    const userData = doc.exists ? doc.data() : {};
+                    if (userData.role === 'admin') {
+                        if (!window.adminInstance) initializeAdminApp(user);
+                        showPage('admin-page');
+                    } else {
+                        if (!window.appInstance) initializeEmployeeApp(user);
+                        showPage('app-page');
+                    }
+                }).catch(err => {
+                    console.error("Erro ao buscar role, assumindo funcionário:", err);
+                    if (!window.appInstance) initializeEmployeeApp(user);
+                    showPage('app-page');
+                });
+            } else {
+                showPage('login-page');
+                if (window.appInstance) { window.appInstance.cleanup(); window.appInstance = null; }
+                if (window.adminInstance) { window.adminInstance.cleanup(); window.adminInstance = null; }
+            }
+        });
+
+        function initializeEmployeeApp(user) {
+            window.appInstance = new TimeTrackerApp(user);
+            window.appInstance.init();
+        }
+
+        function initializeAdminApp(user) {
+            window.adminInstance = new AdminApp(user);
+            window.adminInstance.init();
+        }
+
+        class TimePicker {
+            constructor(inputElement) {
+                this.input = inputElement;
+                this.picker = this.createPickerElement();
+                this.input.parentElement.appendChild(this.picker);
+                this.addEventListeners();
+            }
+
+            createPickerElement() {
+                const picker = document.createElement('div');
+                picker.className = 'time-picker';
+                const hoursCol = document.createElement('div');
+                hoursCol.className = 'time-picker-column';
+                for (let i = 0; i < 24; i++) {
+                    const item = document.createElement('div');
+                    item.className = 'time-picker-item';
+                    item.textContent = String(i).padStart(2, '0');
+                    item.dataset.value = String(i).padStart(2, '0');
+                    hoursCol.appendChild(item);
+                }
+                const minutesCol = document.createElement('div');
+                minutesCol.className = 'time-picker-column';
+                for (let i = 0; i < 60; i += 5) {
+                    const item = document.createElement('div');
+                    item.className = 'time-picker-item';
+                    item.textContent = String(i).padStart(2, '0');
+                    item.dataset.value = String(i).padStart(2, '0');
+                    minutesCol.appendChild(item);
+                }
+                picker.appendChild(hoursCol);
+                picker.appendChild(minutesCol);
+                return picker;
+            }
+
+            addEventListeners() {
+                this.input.addEventListener('focus', () => this.show());
+                document.addEventListener('click', (e) => {
+                    if (!this.picker.contains(e.target) && e.target !== this.input) {
+                        this.hide();
+                    }
+                });
+                this.picker.addEventListener('click', (e) => {
+                    const item = e.target.closest('.time-picker-item');
+                    if (!item) return;
+
+                    const column = item.parentElement;
+                    const currentValue = this.input.value.split(':');
+                    let hour = currentValue[0] || '00';
+                    let minute = currentValue[1] || '00';
+
+                    Array.from(column.children).forEach(child => child.classList.remove('selected'));
+                    item.classList.add('selected');
+
+                    if (column === this.picker.children[0]) { // Hour column
+                        hour = item.dataset.value;
+                    } else { // Minute column
+                        minute = item.dataset.value;
+                        this.hide();
+                    }
+                    this.input.value = `${hour}:${minute}`;
+                });
+            }
+
+            show() { this.picker.classList.add('visible'); }
+            hide() { this.picker.classList.remove('visible'); }
+        }
+
+        class TimeTrackerApp {
+            constructor(user) { this.user = user; this.state = { entries: [], settings: { dailyWorkload: 8 }, bonuses: [] }; this.unsubscribe = null; this.userDocRef = user ? db.collection('users').doc(user.uid) : null; this.dom = {}; this.holidays = { '2025': [ {date: '2025-01-01', name: 'Confraternização Universal'}, {date: '2025-03-04', name: 'Carnaval'}, {date: '2025-04-18', name: 'Paixão de Cristo'}, {date: '2025-04-21', name: 'Tiradentes'}, {date: '2025-05-01', name: 'Dia do Trabalho'}, {date: '2025-06-19', name: 'Corpus Christi'}, {date: '2025-09-07', name: 'Independência do Brasil'}, {date: '2025-10-12', name: 'Nossa Senhora Aparecida'}, {date: '2025-11-02', name: 'Finados'}, {date: '2025-11-15', name: 'Proclamação da República'}, {date: '2025-12-25', name: 'Natal'} ], '2026': [ {date: '2026-01-01', name: 'Confraternização Universal'}, {date: '2026-02-17', name: 'Carnaval'}, {date: '2026-04-03', name: 'Paixão de Cristo'}, {date: '2026-04-21', name: 'Tiradentes'}, {date: '2026-05-01', name: 'Dia do Trabalho'}, {date: '2026-06-04', name: 'Corpus Christi'}, {date: '2026-09-07', name: 'Independência do Brasil'}, {date: '2026-10-12', name: 'Nossa Senhora Aparecida'}, {date: '2026-11-02', name: 'Finados'}, {date: '2026-11-15', name: 'Proclamação da República'}, {date: '2026-12-25', name: 'Natal'} ] }; }
+            init() { this.selectDOMElements(); this.addEventListeners(); this.initPickers(); this.listenForData(); }
+            cleanup() { if (this.unsubscribe) this.unsubscribe(); }
+            selectDOMElements() { const app = document.getElementById('app-page'); this.dom = { entriesTbody: app.querySelector('#entries-tbody'), addEntryModal: document.getElementById('add-entry-modal'), addEntryForm: document.getElementById('add-entry-form'), settingsModal: document.getElementById('settings-modal'), openSettingsModalBtn: app.querySelector('#open-settings-modal'), settingsForm: document.getElementById('settings-form'), bonifiedModal: document.getElementById('bonified-modal'), openBonifiedModalBtn: app.querySelector('#open-bonified-modal'), bonifiedForm: document.getElementById('bonified-form'), timeBalanceEl: app.querySelector('#time-balance'), workedHoursEl: app.querySelector('#worked-hours'), expectedHoursEl: app.querySelector('#expected-hours'), prevMonthBalanceEl: app.querySelector('#prev-month-balance'), bonifiedHoursDisplayEl: app.querySelector('#bonified-hours-display'), currentMonthBalanceEl: app.querySelector('#current-month-balance'), daysCompletedEl: app.querySelector('#days-completed'), daysTotalEl: app.querySelector('#days-total'), daysRemainingEl: app.querySelector('#days-remaining'), holidayListEl: app.querySelector('#holiday-list'), addEntryBtn: app.querySelector('#add-entry-btn') }; }
+            listenForData() { if(!this.userDocRef) return; this.unsubscribe = this.userDocRef.onSnapshot(doc => { if (doc.exists) { const data = doc.data(); if (data.trackerData) { this.state = { settings: data.trackerData.settings || { dailyWorkload: 8 }, entries: data.trackerData.entries || [], bonuses: data.trackerData.bonuses || [] }; } applyTheme(data.theme || 'dark-theme'); this.render(); } }, err => console.error("Erro no listener do Firestore:", err)); }
+            saveData() { if(this.userDocRef) this.userDocRef.set({ trackerData: this.state }, { merge: true }).catch(console.error); }
+            static timeToMinutes(str) { if (!str) return 0; const [h, m] = str.split(':').map(Number); return (h||0)*60 + (m||0); }
+            static formatMinutesToHHMM(mins) { if(isNaN(mins)) return '00:00'; const s=mins<0?'-':''; const a=Math.abs(mins); const h=Math.floor(a/60); const m=Math.round(a%60); return `${s}${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`; }
+            static calculateWorkedMinutes(e) { if(!e.startTime||!e.endTime)return 0; return TimeTrackerApp.timeToMinutes(e.endTime)-TimeTrackerApp.timeToMinutes(e.startTime); }
+            networkDays(start, end, year) { let c=0; let cur=new Date(start.getTime()); const hS=new Set((this.holidays[year]||[]).map(h => h.date)); while(cur<=end){const d=cur.getDay(); const dS=cur.toISOString().split('T')[0]; if(d!==0&&d!==6&&!hS.has(dS))c++; cur.setDate(cur.getDate()+1);} return c;}
+            render() { this.renderTable(); this.renderDashboard(); this.renderHolidays(); feather.replace(); }
+            renderTable() { this.dom.entriesTbody.innerHTML = ''; const sorted = [...this.state.entries].sort((a, b) => new Date(b.date) - new Date(a.date) || a.startTime.localeCompare(b.startTime)); if(sorted.length === 0) { this.dom.entriesTbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding: 2rem;">Nenhum lançamento.</td></tr>`; return; } sorted.forEach(e => { const [y, m, d] = e.date.split('-'); this.dom.entriesTbody.innerHTML += `<tr><td>${d}/${m}/${y}</td><td>${e.startTime||'--:--'}</td><td>${e.endTime||'--:--'}</td><td>${TimeTrackerApp.formatMinutesToHHMM(TimeTrackerApp.calculateWorkedMinutes(e))}</td><td class="actions-cell"><i class="action-icon" data-feather="edit" onclick="window.appInstance.editEntry('${e.id}')"></i><i class="action-icon delete" data-feather="trash-2" onclick="window.appInstance.deleteEntry('${e.id}')"></i></td></tr>`; }); }
+            renderDashboard() { const today=new Date(), cM=today.getMonth(), cY=today.getFullYear(); const pMD=new Date(cY,cM-1,1), pM=pMD.getMonth(), pMY=pMD.getFullYear(); let wMPM=0; const wDPM=new Set(); this.state.entries.forEach(e=>{const eD=new Date(e.date+'T00:00:00'); if(eD.getMonth()===pM&&eD.getFullYear()===pMY){wMPM+=TimeTrackerApp.calculateWorkedMinutes(e);wDPM.add(e.date);}}); const mSPrev=new Date(pMY,pM,1), mEPrev=new Date(pMY,pM+1,0); const tWDIMPrev=this.networkDays(mSPrev,mEPrev,pMY.toString()); const eMPM=tWDIMPrev*(this.state.settings.dailyWorkload||8)*60; const bPM=this.state.bonuses.filter(b=>{const bD=new Date(b.date);return bD.getMonth()===pM&&bD.getFullYear()===pMY;}).reduce((a,b)=>a+b.minutes,0); const balPM=wMPM-eMPM+bPM; this.dom.prevMonthBalanceEl.textContent=TimeTrackerApp.formatMinutesToHHMM(balPM); let wMTM=0; const wDTM=new Set(); this.state.entries.forEach(e=>{const eD=new Date(e.date+'T00:00:00'); if(eD.getMonth()===cM&&eD.getFullYear()===cY){wMTM+=TimeTrackerApp.calculateWorkedMinutes(e);wDTM.add(e.date);}}); const dC=wDTM.size; const mS=new Date(cY,cM,1), mE=new Date(cY,cM+1,0); const tWDIM=this.networkDays(mS,mE,cY.toString()); const eMTM=tWDIM*(this.state.settings.dailyWorkload||8)*60; const bTM=this.state.bonuses.filter(b=>{const bD=new Date(b.date);return bD.getMonth()===cM&&bD.getFullYear()===cY;}).reduce((a,b)=>a+b.minutes,0); const cMB=wMTM-(dC*(this.state.settings.dailyWorkload||8)*60)+bTM; const tB=balPM+cMB; this.dom.workedHoursEl.textContent=TimeTrackerApp.formatMinutesToHHMM(wMTM); this.dom.expectedHoursEl.textContent=TimeTrackerApp.formatMinutesToHHMM(eMTM); this.dom.bonifiedHoursDisplayEl.textContent=TimeTrackerApp.formatMinutesToHHMM(bTM); this.dom.currentMonthBalanceEl.textContent=TimeTrackerApp.formatMinutesToHHMM(cMB); this.dom.timeBalanceEl.textContent=TimeTrackerApp.formatMinutesToHHMM(tB); this.dom.timeBalanceEl.parentElement.className=tB>=0?'metric-card positive':'metric-card negative'; this.dom.daysCompletedEl.textContent=dC; this.dom.daysTotalEl.textContent=tWDIM; this.dom.daysRemainingEl.textContent=Math.max(0,tWDIM-dC); }
+            renderHolidays() { const today=new Date(); today.setHours(0,0,0,0); this.dom.holidayListEl.innerHTML=''; const allHolidays = Object.values(this.holidays).flat(); const upcoming=allHolidays.map(h=>({ ...h, dateObj: new Date(h.date+'T00:00:00')})).filter(h=>h.dateObj>=today).sort((a,b)=>a.dateObj-b.dateObj); if(upcoming.length===0){this.dom.holidayListEl.innerHTML=`<li><span>Nenhum feriado futuro.</span></li>`;return;} upcoming.forEach(h=>{this.dom.holidayListEl.innerHTML+=`<li><span>${h.name}</span> <span class="date">${h.dateObj.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'})}</span></li>`;}); }
+            openModal(modal) { if(modal) modal.classList.add('visible'); }
+            closeModal(modal) { if(modal) modal.classList.remove('visible'); }
+            addEventListeners() { document.querySelectorAll('.modal-overlay').forEach(m => m.addEventListener('click', e => { if(e.target === m || e.target.closest('.close-modal')) this.closeModal(m); })); this.dom.addEntryBtn.addEventListener('click', () => { document.getElementById('entry-modal-title').textContent = 'Novo Período de Trabalho'; this.dom.addEntryForm.reset(); document.getElementById('entry-id').value = ''; this.openModal(this.dom.addEntryModal); }); this.dom.openSettingsModalBtn.addEventListener('click', () => { document.getElementById('daily-workload').value = this.state.settings.dailyWorkload; this.openModal(this.dom.settingsModal); }); this.dom.openBonifiedModalBtn.addEventListener('click', () => { this.dom.bonifiedForm.reset(); this.openModal(this.dom.bonifiedModal); }); this.dom.addEntryForm.addEventListener('submit', e => { e.preventDefault(); const entryId = document.getElementById('entry-id').value; const newEntryData = { date:document.getElementById('date-input').value,startTime:document.getElementById('start-time-input').value,endTime:document.getElementById('end-time-input').value}; if (entryId) { const index = this.state.entries.findIndex(entry => entry.id === entryId); if (index > -1) this.state.entries[index] = { ...this.state.entries[index], ...newEntryData }; } else { this.state.entries.push({id:`entry_${Date.now()}`,...newEntryData}); } this.saveData(); this.closeModal(this.dom.addEntryModal); e.target.reset(); }); this.dom.settingsForm.addEventListener('submit', e => { e.preventDefault(); this.state.settings.dailyWorkload = parseFloat(document.getElementById('daily-workload').value); this.saveData(); this.closeModal(this.dom.settingsModal); }); this.dom.bonifiedForm.addEventListener('submit', e => { e.preventDefault(); this.state.bonuses.push({id:`bonus_${Date.now()}`,date:new Date().toISOString().split('T')[0],minutes:TimeTrackerApp.timeToMinutes(document.getElementById('bonified-hours-input').value),description:document.getElementById('bonified-description').value}); this.saveData(); this.closeModal(this.dom.bonifiedModal); e.target.reset(); }); }
+            deleteEntry(id) { this.state.entries = this.state.entries.filter(e => e.id !== id); this.saveData(); }
+            editEntry(id) { const entry = this.state.entries.find(e => e.id === id); if (!entry) return; document.getElementById('entry-modal-title').textContent = 'Editar Período'; document.getElementById('entry-id').value = entry.id; document.getElementById('date-input')._flatpickr.setDate(entry.date, true); document.getElementById('start-time-input').value = entry.startTime || ''; document.getElementById('end-time-input').value = entry.endTime || ''; this.openModal(this.dom.addEntryModal); }
+            initPickers() { flatpickr("#date-input", { dateFormat: "Y-m-d", locale: "pt", altInput: true, altFormat: "d/m/Y" }); document.querySelectorAll(".time-input").forEach(el => new TimePicker(el)); }
+        }
+        
+        class AdminApp {
+            constructor(user) { this.user = user; this.users = []; this.unsubscribe = null; this.dom = { userList: document.getElementById('user-list'), userDetailsModal: document.getElementById('user-details-modal'), userDetailsTitle: document.getElementById('user-details-title'), userDetailsContent: document.getElementById('user-details-content'), }; }
+            init() { this.listenForUsers(); this.addEventListeners(); }
+            cleanup() { if (this.unsubscribe) this.unsubscribe(); }
+            listenForUsers() { this.unsubscribe = db.collection('users').where('role', '==', 'employee').onSnapshot(snapshot => { this.users = []; snapshot.forEach(doc => { this.users.push({ id: doc.id, ...doc.data() }); }); this.renderUserList(); }); }
+            renderUserList() { this.dom.userList.innerHTML = ''; this.users.forEach(user => { const li = document.createElement('li'); li.className = 'user-list-item'; li.dataset.userId = user.id; li.innerHTML = `<div class="user-info"><strong>${user.name}</strong><div class="email">${user.email}</div></div><span class="user-role">${user.role || 'employee'}</span>`; this.dom.userList.appendChild(li); }); }
+            addEventListeners() { this.dom.userList.addEventListener('click', e => { const item = e.target.closest('.user-list-item'); if (item) { const userId = item.dataset.userId; const user = this.users.find(u => u.id === userId); if (user) this.showUserDetails(user); } }); this.dom.userDetailsModal.addEventListener('click', e => { if (e.target === this.dom.userDetailsModal || e.target.closest('.close-modal')) this.dom.userDetailsModal.classList.remove('visible'); }); }
+            showUserDetails(user) {
+                const userData = user.trackerData || { entries: [], settings: { dailyWorkload: 8 }, bonuses: [] };
+                this.dom.userDetailsTitle.textContent = `Detalhes de ${user.name} - ${userData.settings.dailyWorkload || 'N/A'}h/dia`;
+                
+                const dashboardHTML = `
+                    <main class="main-content">
+                        <section class="entries-section card">
+                            <div class="table-wrapper" style="max-height: 400px;">
+                                <table class="entries-table">
+                                    <thead><tr><th>Data</th><th>Entrada</th><th>Saída</th><th>Duração</th></tr></thead>
+                                    <tbody>
+                                        ${userData.entries.sort((a,b) => new Date(b.date) - new Date(a.date) || a.startTime.localeCompare(b.startTime)).map(e => `
+                                            <tr>
+                                                <td>${new Date(e.date+'T00:00:00').toLocaleDateString('pt-BR')}</td>
+                                                <td>${e.startTime || '--:--'}</td>
+                                                <td>${e.endTime || '--:--'}</td>
+                                                <td>${TimeTrackerApp.formatMinutesToHHMM(TimeTrackerApp.calculateWorkedMinutes(e))}</td>
+                                            </tr>`).join('') || `<tr><td colspan="4" style="text-align:center; padding: 2rem;">Nenhum lançamento.</td></tr>`}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </section>
+                        <aside class="dashboard">
+                            <!-- Cards de métricas serão gerados aqui -->
+                        </aside>
+                    </main>
+                `;
+                this.dom.userDetailsContent.innerHTML = dashboardHTML;
+                
+                const dashboardContainer = this.dom.userDetailsContent.querySelector('.dashboard');
+                const metrics = this.calculateUserMetrics(userData);
+                dashboardContainer.innerHTML = `
+                    <div class="metric-card ${metrics.totalBalance >= 0 ? 'positive' : 'negative'}"><h3>Banco de Horas Total</h3><div class="value">${TimeTrackerApp.formatMinutesToHHMM(metrics.totalBalance)}</div></div>
+                    <div class="metric-card"><h3>Horas Trabalhadas (Mês)</h3><div class="value">${TimeTrackerApp.formatMinutesToHHMM(metrics.workedMinutesThisMonth)}</div></div>
+                    <div class="metric-card"><h3>Horas Esperadas (Mês)</h3><div class="value">${TimeTrackerApp.formatMinutesToHHMM(metrics.expectedMinutesThisMonth)}</div></div>
+                    <div class="metric-card"><h3>Banco de Horas Mês Anterior</h3><div class="value">${TimeTrackerApp.formatMinutesToHHMM(metrics.balancePreviousMonth)}</div></div>
+                    <div class="metric-card"><h3>Horas Abonadas (Mês)</h3><div class="value">${TimeTrackerApp.formatMinutesToHHMM(metrics.bonificationsThisMonth)}</div></div>
+                    <div class="metric-card ${metrics.currentMonthBalance >= 0 ? 'positive' : 'negative'}"><h3>Saldo do Mês</h3><div class="value">${TimeTrackerApp.formatMinutesToHHMM(metrics.currentMonthBalance)}</div></div>
+                `; 
+                
+                this.dom.userDetailsModal.classList.add('visible');
+                feather.replace();
+            }
+
+            calculateUserMetrics(userData) {
+                const holidays = new TimeTrackerApp(null).holidays;
+                const networkDays = (start, end, year) => { let c=0; let cur=new Date(start.getTime()); const hS=new Set((holidays[year]||[]).map(h => h.date)); while(cur<=end){const d=cur.getDay(); const dS=cur.toISOString().split('T')[0]; if(d!==0&&d!==6&&!hS.has(dS))c++; cur.setDate(cur.getDate()+1);} return c;};
+
+                const today=new Date(), cM=today.getMonth(), cY=today.getFullYear();
+                const pMD=new Date(cY,cM-1,1), pM=pMD.getMonth(), pMY=pMD.getFullYear();
+                let wMPM=0; const wDPM=new Set();
+                userData.entries.forEach(e=>{const eD=new Date(e.date+'T00:00:00'); if(eD.getMonth()===pM&&eD.getFullYear()===pMY){wMPM+=TimeTrackerApp.calculateWorkedMinutes(e);wDPM.add(e.date);}});
+                const mSPrev=new Date(pMY,pM,1), mEPrev=new Date(pMY,pM+1,0); const tWDIMPrev=networkDays(mSPrev,mEPrev,pMY.toString()); const eMPM=tWDIMPrev*(userData.settings.dailyWorkload||8)*60;
+                const bPM=(userData.bonuses||[]).filter(b=>{const bD=new Date(b.date);return bD.getMonth()===pM&&bD.getFullYear()===pMY;}).reduce((a,b)=>a+b.minutes,0);
+                const balancePreviousMonth=wMPM-eMPM+bPM;
+                
+                let workedMinutesThisMonth=0; const wDTM=new Set();
+                userData.entries.forEach(e=>{const eD=new Date(e.date+'T00:00:00'); if(eD.getMonth()===cM&&eD.getFullYear()===cY){workedMinutesThisMonth+=TimeTrackerApp.calculateWorkedMinutes(e);wDTM.add(e.date);}});
+                const dC=wDTM.size; const mS=new Date(cY,cM,1), mE=new Date(cY,cM+1,0); const tWDIM=networkDays(mS,mE,cY.toString()); const expectedMinutesThisMonth=tWDIM*(userData.settings.dailyWorkload||8)*60;
+                const bonificationsThisMonth=(userData.bonuses||[]).filter(b=>{const bD=new Date(b.date);return bD.getMonth()===cM&&bD.getFullYear()===cY;}).reduce((a,b)=>a+b.minutes,0);
+                const currentMonthBalance=workedMinutesThisMonth-(dC*(userData.settings.dailyWorkload||8)*60)+bonificationsThisMonth;
+                const totalBalance=balancePreviousMonth+currentMonthBalance;
+
+                return { balancePreviousMonth, workedMinutesThisMonth, expectedMinutesThisMonth, bonificationsThisMonth, currentMonthBalance, totalBalance };
+            }
+        }
+
+        window.appInstance = null;
+        window.adminInstance = null;
+    });
+    </script>
+</body>
+</html>
