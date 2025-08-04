@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SunShield Controle de Horas</title>
-    <link rel="icon" href="https://i.postimg.cc/V6HS85m6/SUN-CONTROL-removebg.png" type="image/png">
+    <link rel="icon" type="image/png" href="images/SunPlan.png">
     
     <!-- Google Fonts: Poppins -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -228,8 +228,8 @@
     <div id="login-page" class="page auth-container">
         <div class="card auth-card">
             <div class="logo">
-                <img src="https://i.postimg.cc/V6HS85m6/SUN-CONTROL-removebg.png" alt="SunShield Logo">
-                <h1>SunShield</h1>
+                <img src="images/SunPlan.png">
+                <h1>SunPlan</h1>
             </div>
             <h2>Bem-vindo de volta!</h2>
             <p>Faça login para acessar seu painel de horas.</p>
@@ -248,7 +248,7 @@
     <!-- PÁGINA DE REGISTRO -->
     <div id="register-page" class="page auth-container">
         <div class="card auth-card">
-             <div class="logo"><img src="https://i.postimg.cc/V6HS85m6/SUN-CONTROL-removebg.png" alt="SunShield Logo"><h1>SunShield</h1></div>
+             <div class="logo"><img src="images/SunPlan.png" alt="SunShield Logo"><h1>SunPlan</h1></div>
             <h2>Crie sua Conta</h2>
             <p>Comece a monitorar seu tempo com precisão.</p>
             <form id="register-form">
@@ -267,7 +267,7 @@
     <!-- PÁGINA DE ESQUECI A SENHA -->
     <div id="forgot-password-page" class="page auth-container">
         <div class="card auth-card">
-             <div class="logo"><img src="https://i.postimg.cc/V6HS85m6/SUN-CONTROL-removebg.png" alt="SunShield Logo"><h1>SunShield</h1></div>
+             <div class="logo"><img src="images/SunPlan.png" alt="SunShield Logo"><h1>SunPlan</h1></div>
             <h2>Recuperar Senha</h2>
             <p>Insira seu email e enviaremos um link para redefinir sua senha.</p>
             <form id="forgot-password-form">
@@ -285,9 +285,13 @@
     <div id="app-page" class="page">
         <div class="app-container">
             <header>
-                <div class="logo">
-                     <img src="https://i.postimg.cc/V6HS85m6/SUN-CONTROL-removebg.png" alt="SunShield Logo">
-                    <h1>SunShield Controle de Horas</h1>
+                <div> <!-- Container para agrupar logo e subtítulo -->
+                    <div class="logo">
+                         <img src="images/SunPlan.png" alt="SunShield Logo">
+                        <h1>SunShield Controle de Horas</h1>
+                    </div>
+                    <!-- TÍTULO DO MÊS ATUAL (MOVIMENTEI PARA CÁ) -->
+                    <h2 style="font-weight: 500; font-size: 1.2rem; color: var(--text-secondary); margin-left: 52px; margin-top: -10px;" id="current-month-display"></h2>
                 </div>
                 <div class="header-actions">
                     <button class="theme-switcher"></button>
@@ -297,6 +301,7 @@
                     <button class="btn btn-inline btn-secondary" id="logout-btn" title="Sair"><i data-feather="log-out"></i></button>
                 </div>
             </header>
+
             <main class="main-content">
                 <section class="entries-section card">
                     <div class="table-wrapper">
@@ -320,6 +325,11 @@
                     </div>
                     <div class="metric-card">
                         <i class="icon" data-feather="archive"></i><h3>Banco Mês Anterior</h3><div class="value" id="prev-month-balance">00:00</div>
+                        <!-- BOTÃO "VER DETALHES" ESTILIZADO -->
+                        <button id="open-prev-month-modal" class="btn btn-secondary" style="width: auto; padding: 0.4rem 0.8rem; font-size: 0.75rem; margin-top: 0.75rem;">
+                            <i data-feather="calendar" style="width: 14px; height: 14px;"></i>
+                            <span>Ver Detalhes</span>
+                        </button>
                     </div>
                     <div class="metric-card">
                         <i class="icon" data-feather="gift"></i><h3>Horas Abonadas (Mês)</h3><div class="value" id="bonified-hours-display">00:00</div>
@@ -411,6 +421,26 @@
             </div>
             <div id="user-details-content">
                 <!-- Conteúdo dinâmico do dashboard do usuário -->
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL PARA DETALHES DO MÊS ANTERIOR -->
+    <div class="modal-overlay" id="prev-month-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="prev-month-modal-title">Detalhes do Mês Anterior</h2>
+                <i data-feather="x" class="close-modal"></i>
+            </div>
+            <div class="table-wrapper" style="max-height: 400px;">
+                <table class="entries-table">
+                    <thead>
+                        <tr><th>Data</th><th>Entrada</th><th>Saída</th><th>Duração</th></tr>
+                    </thead>
+                    <tbody id="prev-month-tbody">
+                        <!-- Lançamentos do mês anterior serão inseridos aqui via JS -->
+                    </tbody>
+                </table>
             </div>
         </div>
     </div>
@@ -635,7 +665,7 @@
             constructor(user) { this.user = user; this.state = { entries: [], settings: { dailyWorkload: 8 }, bonuses: [] }; this.unsubscribe = null; this.userDocRef = user ? db.collection('users').doc(user.uid) : null; this.dom = {}; this.holidays = { '2025': [ {date: '2025-01-01', name: 'Confraternização Universal'}, {date: '2025-03-04', name: 'Carnaval'}, {date: '2025-04-18', name: 'Paixão de Cristo'}, {date: '2025-04-21', name: 'Tiradentes'}, {date: '2025-05-01', name: 'Dia do Trabalho'}, {date: '2025-06-19', name: 'Corpus Christi'}, {date: '2025-09-07', name: 'Independência do Brasil'}, {date: '2025-10-12', name: 'Nossa Senhora Aparecida'}, {date: '2025-11-02', name: 'Finados'}, {date: '2025-11-15', name: 'Proclamação da República'}, {date: '2025-12-25', name: 'Natal'} ], '2026': [ {date: '2026-01-01', name: 'Confraternização Universal'}, {date: '2026-02-17', name: 'Carnaval'}, {date: '2026-04-03', name: 'Paixão de Cristo'}, {date: '2026-04-21', name: 'Tiradentes'}, {date: '2026-05-01', name: 'Dia do Trabalho'}, {date: '2026-06-04', name: 'Corpus Christi'}, {date: '2026-09-07', name: 'Independência do Brasil'}, {date: '2026-10-12', name: 'Nossa Senhora Aparecida'}, {date: '2026-11-02', name: 'Finados'}, {date: '2026-11-15', name: 'Proclamação da República'}, {date: '2026-12-25', name: 'Natal'} ] }; }
             init() { this.selectDOMElements(); this.addEventListeners(); this.initPickers(); this.listenForData(); }
             cleanup() { if (this.unsubscribe) this.unsubscribe(); }
-            selectDOMElements() { const app = document.getElementById('app-page'); this.dom = { entriesTbody: app.querySelector('#entries-tbody'), addEntryModal: document.getElementById('add-entry-modal'), addEntryForm: document.getElementById('add-entry-form'), settingsModal: document.getElementById('settings-modal'), openSettingsModalBtn: app.querySelector('#open-settings-modal'), settingsForm: document.getElementById('settings-form'), bonifiedModal: document.getElementById('bonified-modal'), openBonifiedModalBtn: app.querySelector('#open-bonified-modal'), bonifiedForm: document.getElementById('bonified-form'), timeBalanceEl: app.querySelector('#time-balance'), workedHoursEl: app.querySelector('#worked-hours'), expectedHoursEl: app.querySelector('#expected-hours'), prevMonthBalanceEl: app.querySelector('#prev-month-balance'), bonifiedHoursDisplayEl: app.querySelector('#bonified-hours-display'), currentMonthBalanceEl: app.querySelector('#current-month-balance'), daysCompletedEl: app.querySelector('#days-completed'), daysTotalEl: app.querySelector('#days-total'), daysRemainingEl: app.querySelector('#days-remaining'), holidayListEl: app.querySelector('#holiday-list'), addEntryBtn: app.querySelector('#add-entry-btn') }; }
+            selectDOMElements() { const app = document.getElementById('app-page'); this.dom = { entriesTbody: app.querySelector('#entries-tbody'), addEntryModal: document.getElementById('add-entry-modal'), addEntryForm: document.getElementById('add-entry-form'), settingsModal: document.getElementById('settings-modal'), openSettingsModalBtn: app.querySelector('#open-settings-modal'), settingsForm: document.getElementById('settings-form'), bonifiedModal: document.getElementById('bonified-modal'), openBonifiedModalBtn: app.querySelector('#open-bonified-modal'), bonifiedForm: document.getElementById('bonified-form'), timeBalanceEl: app.querySelector('#time-balance'), workedHoursEl: app.querySelector('#worked-hours'), expectedHoursEl: app.querySelector('#expected-hours'), prevMonthBalanceEl: app.querySelector('#prev-month-balance'), bonifiedHoursDisplayEl: app.querySelector('#bonified-hours-display'), currentMonthBalanceEl: app.querySelector('#current-month-balance'), daysCompletedEl: app.querySelector('#days-completed'), daysTotalEl: app.querySelector('#days-total'), daysRemainingEl: app.querySelector('#days-remaining'), holidayListEl: app.querySelector('#holiday-list'), addEntryBtn: app.querySelector('#add-entry-btn'), currentMonthDisplay: document.getElementById('current-month-display'), prevMonthModal: document.getElementById('prev-month-modal'), openPrevMonthModalBtn: document.getElementById('open-prev-month-modal') }; }
             listenForData() { if(!this.userDocRef) return; this.unsubscribe = this.userDocRef.onSnapshot(doc => { if (doc.exists) { const data = doc.data(); if (data.trackerData) { this.state = { settings: data.trackerData.settings || { dailyWorkload: 8 }, entries: data.trackerData.entries || [], bonuses: data.trackerData.bonuses || [] }; } applyTheme(data.theme || 'dark-theme'); this.render(); } }, err => console.error("Erro no listener do Firestore:", err)); }
             saveData() { if(this.userDocRef) this.userDocRef.set({ trackerData: this.state }, { merge: true }).catch(console.error); }
             static timeToMinutes(str) { if (!str) return 0; const [h, m] = str.split(':').map(Number); return (h||0)*60 + (m||0); }
@@ -643,15 +673,87 @@
             static calculateWorkedMinutes(e) { if(!e.startTime||!e.endTime)return 0; return TimeTrackerApp.timeToMinutes(e.endTime)-TimeTrackerApp.timeToMinutes(e.startTime); }
             networkDays(start, end, year) { let c=0; let cur=new Date(start.getTime()); const hS=new Set((this.holidays[year]||[]).map(h => h.date)); while(cur<=end){const d=cur.getDay(); const dS=cur.toISOString().split('T')[0]; if(d!==0&&d!==6&&!hS.has(dS))c++; cur.setDate(cur.getDate()+1);} return c;}
             render() { this.renderTable(); this.renderDashboard(); this.renderHolidays(); feather.replace(); }
-            renderTable() { this.dom.entriesTbody.innerHTML = ''; const sorted = [...this.state.entries].sort((a, b) => new Date(b.date) - new Date(a.date) || a.startTime.localeCompare(b.startTime)); if(sorted.length === 0) { this.dom.entriesTbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding: 2rem;">Nenhum lançamento.</td></tr>`; return; } sorted.forEach(e => { const [y, m, d] = e.date.split('-'); this.dom.entriesTbody.innerHTML += `<tr><td>${d}/${m}/${y}</td><td>${e.startTime||'--:--'}</td><td>${e.endTime||'--:--'}</td><td>${TimeTrackerApp.formatMinutesToHHMM(TimeTrackerApp.calculateWorkedMinutes(e))}</td><td class="actions-cell"><i class="action-icon" data-feather="edit" onclick="window.appInstance.editEntry('${e.id}')"></i><i class="action-icon delete" data-feather="trash-2" onclick="window.appInstance.deleteEntry('${e.id}')"></i></td></tr>`; }); }
-            renderDashboard() { const today=new Date(), cM=today.getMonth(), cY=today.getFullYear(); const pMD=new Date(cY,cM-1,1), pM=pMD.getMonth(), pMY=pMD.getFullYear(); let wMPM=0; const wDPM=new Set(); this.state.entries.forEach(e=>{const eD=new Date(e.date+'T00:00:00'); if(eD.getMonth()===pM&&eD.getFullYear()===pMY){wMPM+=TimeTrackerApp.calculateWorkedMinutes(e);wDPM.add(e.date);}}); const mSPrev=new Date(pMY,pM,1), mEPrev=new Date(pMY,pM+1,0); const tWDIMPrev=this.networkDays(mSPrev,mEPrev,pMY.toString()); const eMPM=tWDIMPrev*(this.state.settings.dailyWorkload||8)*60; const bPM=this.state.bonuses.filter(b=>{const bD=new Date(b.date);return bD.getMonth()===pM&&bD.getFullYear()===pMY;}).reduce((a,b)=>a+b.minutes,0); const balPM=wMPM-eMPM+bPM; this.dom.prevMonthBalanceEl.textContent=TimeTrackerApp.formatMinutesToHHMM(balPM); let wMTM=0; const wDTM=new Set(); this.state.entries.forEach(e=>{const eD=new Date(e.date+'T00:00:00'); if(eD.getMonth()===cM&&eD.getFullYear()===cY){wMTM+=TimeTrackerApp.calculateWorkedMinutes(e);wDTM.add(e.date);}}); const dC=wDTM.size; const mS=new Date(cY,cM,1), mE=new Date(cY,cM+1,0); const tWDIM=this.networkDays(mS,mE,cY.toString()); const eMTM=tWDIM*(this.state.settings.dailyWorkload||8)*60; const bTM=this.state.bonuses.filter(b=>{const bD=new Date(b.date);return bD.getMonth()===cM&&bD.getFullYear()===cY;}).reduce((a,b)=>a+b.minutes,0); const cMB=wMTM-(dC*(this.state.settings.dailyWorkload||8)*60)+bTM; const tB=balPM+cMB; this.dom.workedHoursEl.textContent=TimeTrackerApp.formatMinutesToHHMM(wMTM); this.dom.expectedHoursEl.textContent=TimeTrackerApp.formatMinutesToHHMM(eMTM); this.dom.bonifiedHoursDisplayEl.textContent=TimeTrackerApp.formatMinutesToHHMM(bTM); this.dom.currentMonthBalanceEl.textContent=TimeTrackerApp.formatMinutesToHHMM(cMB); this.dom.timeBalanceEl.textContent=TimeTrackerApp.formatMinutesToHHMM(tB); this.dom.timeBalanceEl.parentElement.className=tB>=0?'metric-card positive':'metric-card negative'; this.dom.daysCompletedEl.textContent=dC; this.dom.daysTotalEl.textContent=tWDIM; this.dom.daysRemainingEl.textContent=Math.max(0,tWDIM-dC); }
+            
+            renderTable() {
+                this.dom.entriesTbody.innerHTML = '';
+                const today = new Date();
+                const currentMonth = today.getMonth();
+                const currentYear = today.getFullYear();
+                const currentMonthEntries = this.state.entries.filter(e => {
+                    const entryDate = new Date(e.date + 'T00:00:00');
+                    return entryDate.getMonth() === currentMonth && entryDate.getFullYear() === currentYear;
+                });
+
+                const sorted = [...currentMonthEntries].sort((a, b) => new Date(b.date) - new Date(a.date) || a.startTime.localeCompare(b.startTime));
+                if(sorted.length === 0) {
+                    this.dom.entriesTbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding: 2rem;">Nenhum lançamento para este mês.</td></tr>`;
+                    return;
+                }
+                sorted.forEach(e => {
+                    const [y, m, d] = e.date.split('-');
+                    this.dom.entriesTbody.innerHTML += `<tr><td>${d}/${m}/${y}</td><td>${e.startTime||'--:--'}</td><td>${e.endTime||'--:--'}</td><td>${TimeTrackerApp.formatMinutesToHHMM(TimeTrackerApp.calculateWorkedMinutes(e))}</td><td class="actions-cell"><i class="action-icon" data-feather="edit" onclick="window.appInstance.editEntry('${e.id}')"></i><i class="action-icon delete" data-feather="trash-2" onclick="window.appInstance.deleteEntry('${e.id}')"></i></td></tr>`;
+                });
+            }
+
+            renderDashboard() {
+                const today=new Date(), cM=today.getMonth(), cY=today.getFullYear();
+                
+                const monthNames = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
+                this.dom.currentMonthDisplay.textContent = `Mês de ${monthNames[cM]}`;
+
+                const pMD=new Date(cY,cM-1,1), pM=pMD.getMonth(), pMY=pMD.getFullYear(); let wMPM=0; const wDPM=new Set(); this.state.entries.forEach(e=>{const eD=new Date(e.date+'T00:00:00'); if(eD.getMonth()===pM&&eD.getFullYear()===pMY){wMPM+=TimeTrackerApp.calculateWorkedMinutes(e);wDPM.add(e.date);}}); const mSPrev=new Date(pMY,pM,1), mEPrev=new Date(pMY,pM+1,0); const tWDIMPrev=this.networkDays(mSPrev,mEPrev,pMY.toString()); const eMPM=tWDIMPrev*(this.state.settings.dailyWorkload||8)*60; const bPM=this.state.bonuses.filter(b=>{const bD=new Date(b.date);return bD.getMonth()===pM&&bD.getFullYear()===pMY;}).reduce((a,b)=>a+b.minutes,0); const balPM=wMPM-eMPM+bPM; this.dom.prevMonthBalanceEl.textContent=TimeTrackerApp.formatMinutesToHHMM(balPM); let wMTM=0; const wDTM=new Set(); this.state.entries.forEach(e=>{const eD=new Date(e.date+'T00:00:00'); if(eD.getMonth()===cM&&eD.getFullYear()===cY){wMTM+=TimeTrackerApp.calculateWorkedMinutes(e);wDTM.add(e.date);}}); const dC=wDTM.size; const mS=new Date(cY,cM,1), mE=new Date(cY,cM+1,0); const tWDIM=this.networkDays(mS,mE,cY.toString()); const eMTM=tWDIM*(this.state.settings.dailyWorkload||8)*60; const bTM=this.state.bonuses.filter(b=>{const bD=new Date(b.date);return bD.getMonth()===cM&&bD.getFullYear()===cY;}).reduce((a,b)=>a+b.minutes,0); const cMB=wMTM-(dC*(this.state.settings.dailyWorkload||8)*60)+bTM; const tB=balPM+cMB; this.dom.workedHoursEl.textContent=TimeTrackerApp.formatMinutesToHHMM(wMTM); this.dom.expectedHoursEl.textContent=TimeTrackerApp.formatMinutesToHHMM(eMTM); this.dom.bonifiedHoursDisplayEl.textContent=TimeTrackerApp.formatMinutesToHHMM(bTM); this.dom.currentMonthBalanceEl.textContent=TimeTrackerApp.formatMinutesToHHMM(cMB); this.dom.timeBalanceEl.textContent=TimeTrackerApp.formatMinutesToHHMM(tB); this.dom.timeBalanceEl.parentElement.className=tB>=0?'metric-card positive':'metric-card negative'; this.dom.daysCompletedEl.textContent=dC; this.dom.daysTotalEl.textContent=tWDIM; this.dom.daysRemainingEl.textContent=Math.max(0,tWDIM-dC);
+            }
             renderHolidays() { const today=new Date(); today.setHours(0,0,0,0); this.dom.holidayListEl.innerHTML=''; const allHolidays = Object.values(this.holidays).flat(); const upcoming=allHolidays.map(h=>({ ...h, dateObj: new Date(h.date+'T00:00:00')})).filter(h=>h.dateObj>=today).sort((a,b)=>a.dateObj-b.dateObj); if(upcoming.length===0){this.dom.holidayListEl.innerHTML=`<li><span>Nenhum feriado futuro.</span></li>`;return;} upcoming.forEach(h=>{this.dom.holidayListEl.innerHTML+=`<li><span>${h.name}</span> <span class="date">${h.dateObj.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'})}</span></li>`;}); }
             openModal(modal) { if(modal) modal.classList.add('visible'); }
             closeModal(modal) { if(modal) modal.classList.remove('visible'); }
-            addEventListeners() { document.querySelectorAll('.modal-overlay').forEach(m => m.addEventListener('click', e => { if(e.target === m || e.target.closest('.close-modal')) this.closeModal(m); })); this.dom.addEntryBtn.addEventListener('click', () => { document.getElementById('entry-modal-title').textContent = 'Novo Período de Trabalho'; this.dom.addEntryForm.reset(); document.getElementById('entry-id').value = ''; this.openModal(this.dom.addEntryModal); }); this.dom.openSettingsModalBtn.addEventListener('click', () => { document.getElementById('daily-workload').value = this.state.settings.dailyWorkload; this.openModal(this.dom.settingsModal); }); this.dom.openBonifiedModalBtn.addEventListener('click', () => { this.dom.bonifiedForm.reset(); this.openModal(this.dom.bonifiedModal); }); this.dom.addEntryForm.addEventListener('submit', e => { e.preventDefault(); const entryId = document.getElementById('entry-id').value; const newEntryData = { date:document.getElementById('date-input').value,startTime:document.getElementById('start-time-input').value,endTime:document.getElementById('end-time-input').value}; if (entryId) { const index = this.state.entries.findIndex(entry => entry.id === entryId); if (index > -1) this.state.entries[index] = { ...this.state.entries[index], ...newEntryData }; } else { this.state.entries.push({id:`entry_${Date.now()}`,...newEntryData}); } this.saveData(); this.closeModal(this.dom.addEntryModal); e.target.reset(); }); this.dom.settingsForm.addEventListener('submit', e => { e.preventDefault(); this.state.settings.dailyWorkload = parseFloat(document.getElementById('daily-workload').value); this.saveData(); this.closeModal(this.dom.settingsModal); }); this.dom.bonifiedForm.addEventListener('submit', e => { e.preventDefault(); this.state.bonuses.push({id:`bonus_${Date.now()}`,date:new Date().toISOString().split('T')[0],minutes:TimeTrackerApp.timeToMinutes(document.getElementById('bonified-hours-input').value),description:document.getElementById('bonified-description').value}); this.saveData(); this.closeModal(this.dom.bonifiedModal); e.target.reset(); }); }
+            addEventListeners() {
+                document.querySelectorAll('.modal-overlay').forEach(m => m.addEventListener('click', e => { if(e.target === m || e.target.closest('.close-modal')) this.closeModal(m); }));
+                this.dom.addEntryBtn.addEventListener('click', () => { document.getElementById('entry-modal-title').textContent = 'Novo Período de Trabalho'; this.dom.addEntryForm.reset(); document.getElementById('entry-id').value = ''; this.openModal(this.dom.addEntryModal); });
+                this.dom.openSettingsModalBtn.addEventListener('click', () => { document.getElementById('daily-workload').value = this.state.settings.dailyWorkload; this.openModal(this.dom.settingsModal); });
+                this.dom.openBonifiedModalBtn.addEventListener('click', () => { this.dom.bonifiedForm.reset(); this.openModal(this.dom.bonifiedModal); });
+                this.dom.addEntryForm.addEventListener('submit', e => { e.preventDefault(); const entryId = document.getElementById('entry-id').value; const newEntryData = { date:document.getElementById('date-input').value,startTime:document.getElementById('start-time-input').value,endTime:document.getElementById('end-time-input').value}; if (entryId) { const index = this.state.entries.findIndex(entry => entry.id === entryId); if (index > -1) this.state.entries[index] = { ...this.state.entries[index], ...newEntryData }; } else { this.state.entries.push({id:`entry_${Date.now()}`,...newEntryData}); } this.saveData(); this.closeModal(this.dom.addEntryModal); e.target.reset(); });
+                this.dom.settingsForm.addEventListener('submit', e => { e.preventDefault(); this.state.settings.dailyWorkload = parseFloat(document.getElementById('daily-workload').value); this.saveData(); this.closeModal(this.dom.settingsModal); });
+                this.dom.bonifiedForm.addEventListener('submit', e => { e.preventDefault(); this.state.bonuses.push({id:`bonus_${Date.now()}`,date:new Date().toISOString().split('T')[0],minutes:TimeTrackerApp.timeToMinutes(document.getElementById('bonified-hours-input').value),description:document.getElementById('bonified-description').value}); this.saveData(); this.closeModal(this.dom.bonifiedModal); e.target.reset(); });
+                this.dom.openPrevMonthModalBtn.addEventListener('click', (e) => { e.preventDefault(); this.showPrevMonthDetails(); });
+            }
             deleteEntry(id) { this.state.entries = this.state.entries.filter(e => e.id !== id); this.saveData(); }
             editEntry(id) { const entry = this.state.entries.find(e => e.id === id); if (!entry) return; document.getElementById('entry-modal-title').textContent = 'Editar Período'; document.getElementById('entry-id').value = entry.id; document.getElementById('date-input')._flatpickr.setDate(entry.date, true); document.getElementById('start-time-input').value = entry.startTime || ''; document.getElementById('end-time-input').value = entry.endTime || ''; this.openModal(this.dom.addEntryModal); }
             initPickers() { flatpickr("#date-input", { dateFormat: "Y-m-d", locale: "pt", altInput: true, altFormat: "d/m/Y" }); document.querySelectorAll(".time-input").forEach(el => new TimePicker(el)); }
+            
+            showPrevMonthDetails() {
+                const today = new Date();
+                const prevMonthDate = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+                const prevMonth = prevMonthDate.getMonth();
+                const prevMonthYear = prevMonthDate.getFullYear();
+
+                const prevMonthEntries = this.state.entries.filter(e => {
+                    const entryDate = new Date(e.date + 'T00:00:00');
+                    return entryDate.getMonth() === prevMonth && entryDate.getFullYear() === prevMonthYear;
+                }).sort((a, b) => new Date(b.date) - new Date(a.date));
+
+                const monthNames = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
+                document.getElementById('prev-month-modal-title').textContent = `Detalhes de ${monthNames[prevMonth]}`;
+                
+                const tbody = document.getElementById('prev-month-tbody');
+                tbody.innerHTML = '';
+                if (prevMonthEntries.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; padding: 2rem;">Nenhum lançamento para este mês.</td></tr>`;
+                } else {
+                    prevMonthEntries.forEach(e => {
+                        const [y, m, d] = e.date.split('-');
+                        tbody.innerHTML += `
+                            <tr>
+                                <td>${d}/${m}/${y}</td>
+                                <td>${e.startTime || '--:--'}</td>
+                                <td>${e.endTime || '--:--'}</td>
+                                <td>${TimeTrackerApp.formatMinutesToHHMM(TimeTrackerApp.calculateWorkedMinutes(e))}</td>
+                            </tr>`;
+                    });
+                }
+
+                this.openModal(this.dom.prevMonthModal);
+                feather.replace();
+            }
         }
         
         class AdminApp {
