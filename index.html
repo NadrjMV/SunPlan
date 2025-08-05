@@ -21,6 +21,7 @@
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
 
     <style>
+        /* ESTILOS (sem alterações, apenas uma pequena adição para o input[type=time]) */
         :root {
             --font-family: 'Poppins', sans-serif;
             --transition-speed: 0.3s;
@@ -64,6 +65,7 @@
         .input-group { margin-bottom: 1rem; text-align: left; position: relative; }
         .input-group label { display: block; margin-bottom: 0.5rem; font-weight: 500; color: var(--text-secondary); }
         .input-group input { width: 100%; padding: 0.75rem; background-color: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 8px; color: var(--text-primary); font-family: var(--font-family); transition: border-color var(--transition-speed) ease; }
+        /* AJUSTE PARA O SELETOR DE HORA NATIVO */
         .input-group input[type="time"]::-webkit-calendar-picker-indicator { filter: invert(0); }
         body.dark-theme .input-group input[type="time"]::-webkit-calendar-picker-indicator { filter: invert(1); }
         .input-group input:focus { outline: none; border-color: var(--accent-primary); box-shadow: 0 0 0 3px var(--shadow-color); }
@@ -73,11 +75,6 @@
         .alert.error { background-color: rgba(248, 113, 113, 0.1); color: var(--error-color); border: 1px solid var(--error-color); }
         .alert.success { background-color: rgba(52, 211, 153, 0.1); color: var(--success-color); border: 1px solid var(--success-color); }
         .alert.warning { background-color: rgba(251, 191, 36, 0.1); color: var(--warning-color); border: 1px solid var(--warning-color); }
-        
-        /* NOVO ESTILO PARA O CABEÇALHO DA TABELA */
-        .entries-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; padding: 0 0.5rem; }
-        .entries-header h2 { margin: 0; font-size: 1.5rem; }
-
         .table-wrapper { overflow-x: auto; flex-grow: 1; }
         .entries-table { width: 100%; border-collapse: collapse; }
         .entries-table th, .entries-table td { padding: 1rem; text-align: left; border-bottom: 1px solid var(--border-color); }
@@ -88,7 +85,7 @@
         .entries-table .action-icon { cursor: pointer; color: var(--text-secondary); transition: color var(--transition-speed) ease; }
         .entries-table .action-icon:hover { color: var(--accent-primary); }
         .entries-table .action-icon.delete:hover { color: var(--error-color); }
-        .dashboard { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem; align-content: start; }
+        .dashboard { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; align-content: start; }
         .metric-card { position: relative; padding: 1.5rem; }
         .metric-card h3 { font-size: 0.9rem; font-weight: 500; color: var(--text-secondary); margin-bottom: 0.5rem; }
         .metric-card .value { font-size: 1.8rem; font-weight: 600; color: var(--text-primary); letter-spacing: 1px; }
@@ -118,17 +115,64 @@
         .user-role { background-color: var(--accent-primary); color: var(--bg-primary); padding: 0.2rem 0.6rem; border-radius: 20px; font-size: 0.7rem; font-weight: 600; }
         #user-details-content .main-content { grid-template-columns: 1.5fr 1fr; }
         @media (max-width: 1200px) { .main-content, #user-details-content .main-content { grid-template-columns: 1fr; } }
-        @media (max-width: 768px) { .app-container { padding: 1rem; } header { flex-direction: column; align-items: stretch; } .dashboard { grid-template-columns: 1fr; } .modal-grid { grid-template-columns: 1fr; } }
+        @media (max-width: 768px) { .app-container { padding: 1rem; } header { flex-direction: column; align-items: stretch; } .dashboard { grid-template-columns: 1fr 1fr; } .modal-grid { grid-template-columns: 1fr; } }
     </style>
 </head>
 <body>
 
     <div id="login-page" class="page auth-container">
+        <div class="card auth-card">
+            <div class="logo">
+                <img src="images/SunPlan.png">
+                <h1>SunPlan</h1>
+            </div>
+            <h2>Bem-vindo de volta!</h2>
+            <p>Faça login para acessar seu painel de horas.</p>
+            <form id="login-form">
+                <div id="login-alert" class="alert"></div>
+                <div class="input-group"><label for="login-email">Email</label><input type="email" id="login-email" required></div>
+                <div class="input-group"><label for="login-password">Senha</label><input type="password" id="login-password" required></div>
+                <button type="submit" class="btn btn-primary">Entrar</button>
+            </form>
+            <div class="form-footer">
+                <a id="show-forgot-password">Esqueceu a senha?</a> | <a id="show-register">Não tem uma conta? Crie agora</a>
+            </div>
         </div>
+    </div>
+
     <div id="register-page" class="page auth-container">
+        <div class="card auth-card">
+             <div class="logo"><img src="images/SunPlan.png" alt="SunShield Logo"><h1>SunPlan</h1></div>
+            <h2>Crie sua Conta</h2>
+            <p>Comece a monitorar seu tempo com precisão.</p>
+            <form id="register-form">
+                <div id="register-alert" class="alert"></div>
+                <div class="input-group"><label for="register-name">Nome Completo</label><input type="text" id="register-name" required></div>
+                <div class="input-group"><label for="register-email">Email</label><input type="email" id="register-email" required></div>
+                <div class="input-group"><label for="register-password">Senha</label><input type="password" id="register-password" required></div>
+                <button type="submit" class="btn btn-primary">Registrar</button>
+            </form>
+            <div class="form-footer">
+                <a id="show-login-from-register">Já tem uma conta? Faça login</a>
+            </div>
         </div>
+    </div>
+    
     <div id="forgot-password-page" class="page auth-container">
+        <div class="card auth-card">
+             <div class="logo"><img src="images/SunPlan.png" alt="SunShield Logo"><h1>SunPlan</h1></div>
+            <h2>Recuperar Senha</h2>
+            <p>Insira seu email e enviaremos um link para redefinir sua senha.</p>
+            <form id="forgot-password-form">
+                <div id="forgot-alert" class="alert"></div>
+                <div class="input-group"><label for="forgot-email">Email</label><input type="email" id="forgot-email" required></div>
+                <button type="submit" class="btn btn-primary">Enviar Link</button>
+            </form>
+            <div class="form-footer">
+                <a id="show-login-from-forgot">Voltar para o Login</a>
+            </div>
         </div>
+    </div>
 
     <div id="app-page" class="page">
         <div class="app-container">
@@ -144,20 +188,13 @@
                     <button class="theme-switcher"></button>
                     <button class="btn btn-inline btn-secondary" id="open-settings-modal" title="Configurações"><i data-feather="settings"></i></button>
                     <button class="btn btn-inline btn-secondary" id="open-bonified-modal" title="Adicionar Horas Abonadas"><i data-feather="gift"></i></button>
+                    <button class="btn btn-inline btn-primary" id="add-entry-btn" title="Novo Lançamento"><i data-feather="plus-circle"></i></button>
                     <button class="btn btn-inline btn-secondary" id="logout-btn" title="Sair"><i data-feather="log-out"></i></button>
                 </div>
             </header>
 
             <main class="main-content">
                 <section class="entries-section card">
-                    <div class="entries-header">
-                        <h2>Histórico de Lançamentos</h2>
-                        <button class="btn btn-inline btn-primary" id="add-entry-btn" title="Novo Lançamento">
-                            <i data-feather="plus-circle"></i>
-                            <span>Novo Lançamento</span>
-                        </button>
-                    </div>
-
                     <div class="table-wrapper">
                         <table class="entries-table">
                             <thead>
@@ -167,43 +204,29 @@
                         </table>
                     </div>
                 </section>
-
                 <aside class="dashboard">
                     <div class="metric-card" id="time-balance-card">
-                        <i class="icon" data-feather="briefcase"></i>
-                        <h3>Banco de Horas Total</h3>
-                        <div class="value" id="time-balance">00:00</div>
+                        <i class="icon" data-feather="briefcase"></i><h3>Banco de Horas Total</h3><div class="value" id="time-balance">00:00</div>
                     </div>
                     <div class="metric-card">
-                        <i class="icon" data-feather="clock"></i>
-                        <h3>Horas Trabalhadas (Mês)</h3>
-                        <div class="value" id="worked-hours">00:00</div>
+                        <i class="icon" data-feather="clock"></i><h3>Horas Trabalhadas (Mês)</h3><div class="value" id="worked-hours">00:00</div>
                     </div>
                     <div class="metric-card">
-                        <i class="icon" data-feather="target"></i>
-                        <h3>Horas Esperadas (Mês)</h3>
-                        <div class="value" id="expected-hours">00:00</div>
+                        <i class="icon" data-feather="target"></i><h3>Horas Esperadas (Mês)</h3><div class="value" id="expected-hours">00:00</div>
                     </div>
                     <div class="metric-card">
-                        <i class="icon" data-feather="archive"></i>
-                        <h3>Banco Mês Anterior</h3>
-                        <div class="value" id="prev-month-balance">00:00</div>
+                        <i class="icon" data-feather="archive"></i><h3>Banco Mês Anterior</h3><div class="value" id="prev-month-balance">00:00</div>
                         <button id="open-prev-month-modal" class="btn btn-secondary" style="width: auto; padding: 0.4rem 0.8rem; font-size: 0.75rem; margin-top: 0.75rem;">
                             <i data-feather="calendar" style="width: 14px; height: 14px;"></i>
                             <span>Ver Detalhes</span>
                         </button>
                     </div>
                     <div class="metric-card">
-                        <i class="icon" data-feather="gift"></i>
-                        <h3>Horas Abonadas (Mês)</h3>
-                        <div class="value" id="bonified-hours-display">00:00</div>
+                        <i class="icon" data-feather="gift"></i><h3>Horas Abonadas (Mês)</h3><div class="value" id="bonified-hours-display">00:00</div>
                     </div>
                     <div class="metric-card positive">
-                        <i class="icon" data-feather="trending-down"></i>
-                        <h3>Saldo do Mês</h3>
-                        <div class="value" id="current-month-balance">00:00</div>
+                        <i class="icon" data-feather="trending-down"></i><h3>Saldo do Mês</h3><div class="value" id="current-month-balance">00:00</div>
                     </div>
-
                     <div class="card days-summary-card">
                         <div><h3>Dias Cumpridos</h3><div class="value" id="days-completed">0</div></div>
                         <div><h3>Dias Totais</h3><div class="value" id="days-total">0</div></div>
@@ -219,20 +242,84 @@
     </div>
     
     <div id="admin-page" class="page">
+        <div class="app-container">
+            <header>
+                 <div class="logo">
+                     <img src="https://i.postimg.cc/V6HS85m6/SUN-CONTROL-removebg.png" alt="SunShield Logo">
+                    <h1>Painel do Administrador</h1>
+                </div>
+                <div class="header-actions">
+                    <button class="theme-switcher"></button>
+                    <button class="btn btn-inline btn-secondary" id="admin-logout-btn" title="Sair"><i data-feather="log-out"></i></button>
+                </div>
+            </header>
+            <main>
+                <section class="card">
+                    <h2>Funcionários</h2>
+                    <ul id="user-list" class="user-list"></ul>
+                </section>
+            </main>
         </div>
+    </div>
 
     <div class="modal-overlay" id="add-entry-modal">
+        <div class="modal-content">
+            <div class="modal-header"><h2 id="entry-modal-title">Novo Período de Trabalho</h2><i data-feather="x" class="close-modal"></i></div>
+            <form id="add-entry-form">
+                <input type="hidden" id="entry-id">
+                <div id="add-entry-alert" class="alert"></div>
+                <div class="input-group"><label for="date-input">Data</label><input type="text" id="date-input" required placeholder="Selecione uma data..."></div>
+                <div class="modal-grid">
+                    <div class="input-group"><label for="start-time-input">Entrada</label><input type="time" id="start-time-input" required></div>
+                    <div class="input-group"><label for="end-time-input">Saída</label><input type="time" id="end-time-input" required></div>
+                </div>
+                <button type="submit" class="btn btn-primary">Salvar</button>
+            </form>
         </div>
+    </div>
+    
     <div class="modal-overlay" id="settings-modal">
+        <div class="modal-content">
+            <div class="modal-header"><h2>Configurações</h2><i data-feather="x" class="close-modal"></i></div>
+            <form id="settings-form">
+                <div class="input-group"><label for="daily-workload">Carga Horária Diária (Ex: 8 para 8h, 6.5 para 6h30)</label><input type="number" id="daily-workload" step="0.1" min="1" required></div>
+                <button type="submit" class="btn btn-primary">Salvar Configurações</button>
+            </form>
         </div>
+    </div>
+
     <div class="modal-overlay" id="bonified-modal">
+        <div class="modal-content">
+            <div class="modal-header"><h2>Adicionar Horas Abonadas</h2><i data-feather="x" class="close-modal"></i></div>
+            <form id="bonified-form">
+                <div class="input-group"><label for="bonified-hours-input">Horas a Adicionar (HH:MM)</label><input type="time" id="bonified-hours-input" placeholder="00:00" required></div>
+                <div class="input-group"><label for="bonified-description">Descrição (Opcional)</label><input type="text" id="bonified-description" placeholder="Ex: Compensação feriado X"></div>
+                <button type="submit" class="btn btn-primary">Adicionar Bônus</button>
+            </form>
         </div>
+    </div>
+
     <div class="modal-overlay" id="user-details-modal">
+        <div class="modal-content modal-lg">
+            <div class="modal-header"><h2 id="user-details-title">Detalhes do Funcionário</h2><i data-feather="x" class="close-modal"></i></div>
+            <div id="user-details-content"></div>
         </div>
+    </div>
+
     <div class="modal-overlay" id="prev-month-modal">
+        <div class="modal-content">
+            <div class="modal-header"><h2 id="prev-month-modal-title">Detalhes do Mês Anterior</h2><i data-feather="x" class="close-modal"></i></div>
+            <div class="table-wrapper" style="max-height: 400px;">
+                <table class="entries-table">
+                    <thead><tr><th>Data</th><th>Entrada</th><th>Saída</th><th>Duração</th></tr></thead>
+                    <tbody id="prev-month-tbody"></tbody>
+                </table>
+            </div>
         </div>
+    </div>
 
     <script>
+    // PONTO DE INTEGRAÇÃO FIREBASE
     const firebaseConfig = {
         apiKey: "AIzaSyAMdc9DWxU0P3OEjGglMVwNbyrB-rwySSw",
         authDomain: "sunwork-15a7b.firebaseapp.com",
