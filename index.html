@@ -21,7 +21,6 @@
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
 
     <style>
-        /* ESTILOS (sem alterações, apenas uma pequena adição para o input[type=time]) */
         :root {
             --font-family: 'Poppins', sans-serif;
             --transition-speed: 0.3s;
@@ -65,7 +64,6 @@
         .input-group { margin-bottom: 1rem; text-align: left; position: relative; }
         .input-group label { display: block; margin-bottom: 0.5rem; font-weight: 500; color: var(--text-secondary); }
         .input-group input { width: 100%; padding: 0.75rem; background-color: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 8px; color: var(--text-primary); font-family: var(--font-family); transition: border-color var(--transition-speed) ease; }
-        /* AJUSTE PARA O SELETOR DE HORA NATIVO */
         .input-group input[type="time"]::-webkit-calendar-picker-indicator { filter: invert(0); }
         body.dark-theme .input-group input[type="time"]::-webkit-calendar-picker-indicator { filter: invert(1); }
         .input-group input:focus { outline: none; border-color: var(--accent-primary); box-shadow: 0 0 0 3px var(--shadow-color); }
@@ -75,6 +73,10 @@
         .alert.error { background-color: rgba(248, 113, 113, 0.1); color: var(--error-color); border: 1px solid var(--error-color); }
         .alert.success { background-color: rgba(52, 211, 153, 0.1); color: var(--success-color); border: 1px solid var(--success-color); }
         .alert.warning { background-color: rgba(251, 191, 36, 0.1); color: var(--warning-color); border: 1px solid var(--warning-color); }
+        
+        .entries-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; padding: 0 0.5rem; }
+        .entries-header h2 { margin: 0; font-size: 1.5rem; }
+
         .table-wrapper { overflow-x: auto; flex-grow: 1; }
         .entries-table { width: 100%; border-collapse: collapse; }
         .entries-table th, .entries-table td { padding: 1rem; text-align: left; border-bottom: 1px solid var(--border-color); }
@@ -85,13 +87,25 @@
         .entries-table .action-icon { cursor: pointer; color: var(--text-secondary); transition: color var(--transition-speed) ease; }
         .entries-table .action-icon:hover { color: var(--accent-primary); }
         .entries-table .action-icon.delete:hover { color: var(--error-color); }
-        .dashboard { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; align-content: start; }
-        .metric-card { position: relative; padding: 1.5rem; }
+        .dashboard { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem; align-content: start; }
+        
+        .metric-card { 
+            position: relative; 
+            padding: 1.5rem; 
+            background-color: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-left-width: 4px;
+            border-left-color: var(--accent-primary);
+        }
+
         .metric-card h3 { font-size: 0.9rem; font-weight: 500; color: var(--text-secondary); margin-bottom: 0.5rem; }
         .metric-card .value { font-size: 1.8rem; font-weight: 600; color: var(--text-primary); letter-spacing: 1px; }
+        .metric-card.positive { border-left-color: var(--success-color); }
         .metric-card.positive .value { color: var(--success-color); }
+        .metric-card.negative { border-left-color: var(--error-color); }
         .metric-card.negative .value { color: var(--error-color); }
         .metric-card .icon { position: absolute; top: 1.5rem; right: 1.5rem; color: var(--border-color); }
+        
         .days-summary-card { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(3, 1fr); text-align: center; padding: 1rem; }
         .holiday-card { grid-column: 1 / -1; }
         .holiday-list { list-style: none; padding-top: 0.5rem; max-height: 150px; overflow-y: auto; }
@@ -115,7 +129,7 @@
         .user-role { background-color: var(--accent-primary); color: var(--bg-primary); padding: 0.2rem 0.6rem; border-radius: 20px; font-size: 0.7rem; font-weight: 600; }
         #user-details-content .main-content { grid-template-columns: 1.5fr 1fr; }
         @media (max-width: 1200px) { .main-content, #user-details-content .main-content { grid-template-columns: 1fr; } }
-        @media (max-width: 768px) { .app-container { padding: 1rem; } header { flex-direction: column; align-items: stretch; } .dashboard { grid-template-columns: 1fr 1fr; } .modal-grid { grid-template-columns: 1fr; } }
+        @media (max-width: 768px) { .app-container { padding: 1rem; } header { flex-direction: column; align-items: stretch; } .dashboard { grid-template-columns: 1fr; } .modal-grid { grid-template-columns: 1fr; } }
     </style>
 </head>
 <body>
@@ -139,7 +153,6 @@
             </div>
         </div>
     </div>
-
     <div id="register-page" class="page auth-container">
         <div class="card auth-card">
              <div class="logo"><img src="images/SunPlan.png" alt="SunShield Logo"><h1>SunPlan</h1></div>
@@ -157,7 +170,6 @@
             </div>
         </div>
     </div>
-    
     <div id="forgot-password-page" class="page auth-container">
         <div class="card auth-card">
              <div class="logo"><img src="images/SunPlan.png" alt="SunShield Logo"><h1>SunPlan</h1></div>
@@ -188,13 +200,19 @@
                     <button class="theme-switcher"></button>
                     <button class="btn btn-inline btn-secondary" id="open-settings-modal" title="Configurações"><i data-feather="settings"></i></button>
                     <button class="btn btn-inline btn-secondary" id="open-bonified-modal" title="Adicionar Horas Abonadas"><i data-feather="gift"></i></button>
-                    <button class="btn btn-inline btn-primary" id="add-entry-btn" title="Novo Lançamento"><i data-feather="plus-circle"></i></button>
                     <button class="btn btn-inline btn-secondary" id="logout-btn" title="Sair"><i data-feather="log-out"></i></button>
                 </div>
             </header>
 
             <main class="main-content">
                 <section class="entries-section card">
+                    <div class="entries-header">
+                        <h2>Histórico de Lançamentos</h2>
+                        <button class="btn btn-inline btn-primary" id="add-entry-btn" title="Novo Lançamento">
+                            <i data-feather="plus-circle"></i>
+                            <span>Novo Lançamento</span>
+                        </button>
+                    </div>
                     <div class="table-wrapper">
                         <table class="entries-table">
                             <thead>
@@ -204,29 +222,43 @@
                         </table>
                     </div>
                 </section>
+
                 <aside class="dashboard">
-                    <div class="metric-card" id="time-balance-card">
-                        <i class="icon" data-feather="briefcase"></i><h3>Banco de Horas Total</h3><div class="value" id="time-balance">00:00</div>
+                    <div class="card metric-card" id="time-balance-card">
+                        <i class="icon" data-feather="briefcase"></i>
+                        <h3>Banco de Horas Total</h3>
+                        <div class="value" id="time-balance">00:00</div>
                     </div>
-                    <div class="metric-card">
-                        <i class="icon" data-feather="clock"></i><h3>Horas Trabalhadas (Mês)</h3><div class="value" id="worked-hours">00:00</div>
+                    <div class="card metric-card">
+                        <i class="icon" data-feather="clock"></i>
+                        <h3>Horas Trabalhadas (Mês)</h3>
+                        <div class="value" id="worked-hours">00:00</div>
                     </div>
-                    <div class="metric-card">
-                        <i class="icon" data-feather="target"></i><h3>Horas Esperadas (Mês)</h3><div class="value" id="expected-hours">00:00</div>
+                    <div class="card metric-card">
+                        <i class="icon" data-feather="target"></i>
+                        <h3>Horas Esperadas (Mês)</h3>
+                        <div class="value" id="expected-hours">00:00</div>
                     </div>
-                    <div class="metric-card">
-                        <i class="icon" data-feather="archive"></i><h3>Banco Mês Anterior</h3><div class="value" id="prev-month-balance">00:00</div>
+                    <div class="card metric-card">
+                        <i class="icon" data-feather="archive"></i>
+                        <h3>Banco Mês Anterior</h3>
+                        <div class="value" id="prev-month-balance">00:00</div>
                         <button id="open-prev-month-modal" class="btn btn-secondary" style="width: auto; padding: 0.4rem 0.8rem; font-size: 0.75rem; margin-top: 0.75rem;">
                             <i data-feather="calendar" style="width: 14px; height: 14px;"></i>
                             <span>Ver Detalhes</span>
                         </button>
                     </div>
-                    <div class="metric-card">
-                        <i class="icon" data-feather="gift"></i><h3>Horas Abonadas (Mês)</h3><div class="value" id="bonified-hours-display">00:00</div>
+                    <div class="card metric-card">
+                        <i class="icon" data-feather="gift"></i>
+                        <h3>Horas Abonadas (Mês)</h3>
+                        <div class="value" id="bonified-hours-display">00:00</div>
                     </div>
-                    <div class="metric-card positive">
-                        <i class="icon" data-feather="trending-down"></i><h3>Saldo do Mês</h3><div class="value" id="current-month-balance">00:00</div>
+                    <div class="card metric-card positive">
+                        <i class="icon" data-feather="trending-down"></i>
+                        <h3>Saldo do Mês</h3>
+                        <div class="value" id="current-month-balance">00:00</div>
                     </div>
+
                     <div class="card days-summary-card">
                         <div><h3>Dias Cumpridos</h3><div class="value" id="days-completed">0</div></div>
                         <div><h3>Dias Totais</h3><div class="value" id="days-total">0</div></div>
@@ -293,7 +325,7 @@
             <div class="modal-header"><h2>Adicionar Horas Abonadas</h2><i data-feather="x" class="close-modal"></i></div>
             <form id="bonified-form">
                 <div class="input-group"><label for="bonified-hours-input">Horas a Adicionar (HH:MM)</label><input type="time" id="bonified-hours-input" placeholder="00:00" required></div>
-                <div class="input-group"><label for="bonified-description">Descrição (Opcional)</label><input type="text" id="bonified-description" placeholder="Ex: Compensação feriado X"></div>
+                <div class="input-group"><label for="bonified-description">Descrição</label><input type="text" id="bonified-description" placeholder="Ex: Compensação feriado X" required></div>
                 <button type="submit" class="btn btn-primary">Adicionar Bônus</button>
             </form>
         </div>
@@ -319,7 +351,6 @@
     </div>
 
     <script>
-    // PONTO DE INTEGRAÇÃO FIREBASE
     const firebaseConfig = {
         apiKey: "AIzaSyAMdc9DWxU0P3OEjGglMVwNbyrB-rwySSw",
         authDomain: "sunwork-15a7b.firebaseapp.com",
@@ -467,7 +498,7 @@
         }
 
         class TimeTrackerApp {
-            constructor(user) { this.user = user; this.state = { entries: [], settings: { dailyWorkload: 8 }, bonuses: [] }; this.unsubscribe = null; this.userDocRef = user ? db.collection('users').doc(user.uid) : null; this.dom = {}; this.holidays = { '2025': [ {date: '2025-01-01', name: 'Confraternização Universal'}, {date: '2025-03-04', name: 'Carnaval'}, {date: '2025-04-18', name: 'Paixão de Cristo'}, {date: '2025-04-21', name: 'Tiradentes'}, {date: '2025-05-01', name: 'Dia do Trabalho'}, {date: '2025-06-19', name: 'Corpus Christi'}, {date: '2025-09-07', name: 'Independência do Brasil'}, {date: '2025-10-12', name: 'Nossa Senhora Aparecida'}, {date: '2025-11-02', name: 'Finados'}, {date: '2025-11-15', name: 'Proclamação da República'}, {date: '2025-12-25', name: 'Natal'} ], '2026': [ {date: '2026-01-01', name: 'Confraternização Universal'}, {date: '2026-02-17', name: 'Carnaval'}, {date: '2026-04-03', name: 'Paixão de Cristo'}, {date: '2026-04-21', name: 'Tiradentes'}, {date: '2026-05-01', name: 'Dia do Trabalho'}, {date: '2026-06-04', name: 'Corpus Christi'}, {date: '2026-09-07', name: 'Independência do Brasil'}, {date: '2026-10-12', name: 'Nossa Senhora Aparecida'}, {date: '2026-11-02', name: 'Finados'}, {date: '2026-11-15', name: 'Proclamação da República'}, {date: '2026-12-25', name: 'Natal'} ] }; }
+            constructor(user) { this.user = user; this.state = { entries: [], settings: { dailyWorkload: 8 }, bonuses: [] }; this.unsubscribe = null; this.userDocRef = user ? db.collection('users').doc(user.uid) : null; this.dom = {}; this.holidays = { '2025': [ {date: '2025-01-01', name: 'Confraternização Universal'}, {date: '2025-03-04', name: 'Carnaval'}, {date: '2025-04-18', name: 'Paixão de Cristo'}, {date: '2025-04-21', name: 'Tiradentes'}, {date: '2025-05-01', name: 'Dia do Trabalho'}, {date: '2025-06-19', name: 'Corpus Christi'}, {date: '2025-09-07', name: 'Independência do Brasil'}, {date: '2025-10-12', name: 'N. S. Aparecida'}, {date: '2025-11-02', name: 'Finados'}, {date: '2025-11-15', name: 'Proclamação da República'}, {date: '2025-12-25', name: 'Natal'} ], '2026': [ {date: '2026-01-01', name: 'Confraternização Universal'}, {date: '2026-02-17', name: 'Carnaval'}, {date: '2026-04-03', name: 'Paixão de Cristo'}, {date: '2026-04-21', name: 'Tiradentes'}, {date: '2026-05-01', name: 'Dia do Trabalho'}, {date: '2026-06-04', name: 'Corpus Christi'}, {date: '2026-09-07', name: 'Independência do Brasil'}, {date: '2026-10-12', name: 'N. S. Aparecida'}, {date: '2026-11-02', name: 'Finados'}, {date: '2026-11-15', name: 'Proclamação da República'}, {date: '2026-12-25', name: 'Natal'} ] }; }
             init() { this.selectDOMElements(); this.addEventListeners(); this.initPickers(); this.listenForData(); }
             cleanup() { if (this.unsubscribe) this.unsubscribe(); }
             selectDOMElements() { const app = document.getElementById('app-page'); this.dom = { entriesTbody: app.querySelector('#entries-tbody'), addEntryModal: document.getElementById('add-entry-modal'), addEntryForm: document.getElementById('add-entry-form'), settingsModal: document.getElementById('settings-modal'), openSettingsModalBtn: app.querySelector('#open-settings-modal'), settingsForm: document.getElementById('settings-form'), bonifiedModal: document.getElementById('bonified-modal'), openBonifiedModalBtn: app.querySelector('#open-bonified-modal'), bonifiedForm: document.getElementById('bonified-form'), timeBalanceEl: app.querySelector('#time-balance'), workedHoursEl: app.querySelector('#worked-hours'), expectedHoursEl: app.querySelector('#expected-hours'), prevMonthBalanceEl: app.querySelector('#prev-month-balance'), bonifiedHoursDisplayEl: app.querySelector('#bonified-hours-display'), currentMonthBalanceEl: app.querySelector('#current-month-balance'), daysCompletedEl: app.querySelector('#days-completed'), daysTotalEl: app.querySelector('#days-total'), daysRemainingEl: app.querySelector('#days-remaining'), holidayListEl: app.querySelector('#holiday-list'), addEntryBtn: app.querySelector('#add-entry-btn'), currentMonthDisplay: document.getElementById('current-month-display'), prevMonthModal: document.getElementById('prev-month-modal'), openPrevMonthModalBtn: document.getElementById('open-prev-month-modal') }; }
@@ -484,9 +515,10 @@
                 const today = new Date();
                 const currentMonth = today.getMonth();
                 const currentYear = today.getFullYear();
+
                 const currentMonthEntries = this.state.entries.filter(e => {
-                    const entryDate = new Date(e.date + 'T00:00:00');
-                    return entryDate.getMonth() === currentMonth && entryDate.getFullYear() === currentYear;
+                    const [year, month] = e.date.split('-').map(Number);
+                    return year === currentYear && (month - 1) === currentMonth;
                 });
 
                 const sorted = [...currentMonthEntries].sort((a, b) => new Date(b.date) - new Date(a.date) || a.startTime.localeCompare(b.startTime));
@@ -506,7 +538,45 @@
                 const monthNames = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
                 this.dom.currentMonthDisplay.textContent = `Mês de ${monthNames[cM]}`;
 
-                const pMD=new Date(cY,cM-1,1), pM=pMD.getMonth(), pMY=pMD.getFullYear(); let wMPM=0; const wDPM=new Set(); this.state.entries.forEach(e=>{const eD=new Date(e.date+'T00:00:00'); if(eD.getMonth()===pM&&eD.getFullYear()===pMY){wMPM+=TimeTrackerApp.calculateWorkedMinutes(e);wDPM.add(e.date);}}); const mSPrev=new Date(pMY,pM,1), mEPrev=new Date(pMY,pM+1,0); const tWDIMPrev=this.networkDays(mSPrev,mEPrev,pMY.toString()); const eMPM=tWDIMPrev*(this.state.settings.dailyWorkload||8)*60; const bPM=this.state.bonuses.filter(b=>{const bD=new Date(b.date);return bD.getMonth()===pM&&bD.getFullYear()===pMY;}).reduce((a,b)=>a+b.minutes,0); const balPM=wMPM-eMPM+bPM; this.dom.prevMonthBalanceEl.textContent=TimeTrackerApp.formatMinutesToHHMM(balPM); let wMTM=0; const wDTM=new Set(); this.state.entries.forEach(e=>{const eD=new Date(e.date+'T00:00:00'); if(eD.getMonth()===cM&&eD.getFullYear()===cY){wMTM+=TimeTrackerApp.calculateWorkedMinutes(e);wDTM.add(e.date);}}); const dC=wDTM.size; const mS=new Date(cY,cM,1), mE=new Date(cY,cM+1,0); const tWDIM=this.networkDays(mS,mE,cY.toString()); const eMTM=tWDIM*(this.state.settings.dailyWorkload||8)*60; const bTM=this.state.bonuses.filter(b=>{const bD=new Date(b.date);return bD.getMonth()===cM&&bD.getFullYear()===cY;}).reduce((a,b)=>a+b.minutes,0); const cMB=wMTM-(dC*(this.state.settings.dailyWorkload||8)*60)+bTM; const tB=balPM+cMB; this.dom.workedHoursEl.textContent=TimeTrackerApp.formatMinutesToHHMM(wMTM); this.dom.expectedHoursEl.textContent=TimeTrackerApp.formatMinutesToHHMM(eMTM); this.dom.bonifiedHoursDisplayEl.textContent=TimeTrackerApp.formatMinutesToHHMM(bTM); this.dom.currentMonthBalanceEl.textContent=TimeTrackerApp.formatMinutesToHHMM(cMB); this.dom.timeBalanceEl.textContent=TimeTrackerApp.formatMinutesToHHMM(tB); this.dom.timeBalanceEl.parentElement.className=tB>=0?'metric-card positive':'metric-card negative'; this.dom.daysCompletedEl.textContent=dC; this.dom.daysTotalEl.textContent=tWDIM; this.dom.daysRemainingEl.textContent=Math.max(0,tWDIM-dC);
+                const pMD=new Date(cY,cM-1,1), pM=pMD.getMonth(), pMY=pMD.getFullYear(); let wMPM=0;
+                this.state.entries.forEach(e=>{
+                    const [year, month] = e.date.split('-').map(Number);
+                    if(month - 1 === pM && year === pMY){ wMPM+=TimeTrackerApp.calculateWorkedMinutes(e); }
+                });
+                const mSPrev=new Date(pMY,pM,1), mEPrev=new Date(pMY,pM+1,0); 
+                const tWDIMPrev=this.networkDays(mSPrev,mEPrev,pMY.toString()); 
+                const eMPM=tWDIMPrev*(this.state.settings.dailyWorkload||8)*60; 
+                const bPM=(this.state.bonuses||[]).filter(b=>{ const [year, month] = b.date.split('-').map(Number); return month - 1 === pM && year === pMY; }).reduce((a,b)=>a+b.minutes,0);
+                const balPM=wMPM-eMPM+bPM; 
+                this.dom.prevMonthBalanceEl.textContent=TimeTrackerApp.formatMinutesToHHMM(balPM);
+
+                let wMTM=0; const wDTM=new Set(); 
+                this.state.entries.forEach(e=>{
+                    const [year, month] = e.date.split('-').map(Number);
+                    if(month - 1 === cM && year === cY){
+                        wMTM+=TimeTrackerApp.calculateWorkedMinutes(e);
+                        wDTM.add(e.date);
+                    }
+                });
+                const dC=wDTM.size; 
+                const mS=new Date(cY,cM,1), mE=new Date(cY,cM+1,0); 
+                const tWDIM=this.networkDays(mS,mE,cY.toString()); 
+                const eMTM=tWDIM*(this.state.settings.dailyWorkload||8)*60; 
+                const bTM=(this.state.bonuses||[]).filter(b=>{ const [year, month] = b.date.split('-').map(Number); return month - 1 === cM && year === cY; }).reduce((a,b)=>a+b.minutes,0);
+                
+                const cMB = wMTM - (dC * (this.state.settings.dailyWorkload || 8) * 60) + bTM;
+                const tB = balPM + cMB;
+
+                this.dom.workedHoursEl.textContent=TimeTrackerApp.formatMinutesToHHMM(wMTM); 
+                this.dom.expectedHoursEl.textContent=TimeTrackerApp.formatMinutesToHHMM(eMTM); 
+                this.dom.bonifiedHoursDisplayEl.textContent=TimeTrackerApp.formatMinutesToHHMM(bTM); 
+                this.dom.currentMonthBalanceEl.textContent=TimeTrackerApp.formatMinutesToHHMM(cMB); 
+                this.dom.timeBalanceEl.textContent=TimeTrackerApp.formatMinutesToHHMM(tB); 
+                this.dom.timeBalanceEl.parentElement.className = `card metric-card ${tB >= 0 ? 'positive' : 'negative'}`;
+                this.dom.currentMonthBalanceEl.parentElement.className = `card metric-card ${cMB >= 0 ? 'positive' : 'negative'}`;
+                this.dom.daysCompletedEl.textContent=dC; 
+                this.dom.daysTotalEl.textContent=tWDIM; 
+                this.dom.daysRemainingEl.textContent=Math.max(0,tWDIM-dC);
             }
             renderHolidays() { const today=new Date(); today.setHours(0,0,0,0); this.dom.holidayListEl.innerHTML=''; const allHolidays = Object.values(this.holidays).flat(); const upcoming=allHolidays.map(h=>({ ...h, dateObj: new Date(h.date+'T00:00:00')})).filter(h=>h.dateObj>=today).sort((a,b)=>a.dateObj-b.dateObj); if(upcoming.length===0){this.dom.holidayListEl.innerHTML=`<li><span>Nenhum feriado futuro.</span></li>`;return;} upcoming.forEach(h=>{this.dom.holidayListEl.innerHTML+=`<li><span>${h.name}</span> <span class="date">${h.dateObj.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'})}</span></li>`;}); }
             openModal(modal) { if(modal) modal.classList.add('visible'); }
@@ -522,7 +592,16 @@
                 this.dom.openPrevMonthModalBtn.addEventListener('click', (e) => { e.preventDefault(); this.showPrevMonthDetails(); });
             }
             deleteEntry(id) { this.state.entries = this.state.entries.filter(e => e.id !== id); this.saveData(); }
-            editEntry(id) { const entry = this.state.entries.find(e => e.id === id); if (!entry) return; document.getElementById('entry-modal-title').textContent = 'Editar Período'; document.getElementById('entry-id').value = entry.id; document.getElementById('date-input')._flatpickr.setDate(entry.date, true); document.getElementById('start-time-input').value = entry.startTime || ''; document.getElementById('end-time-input').value = entry.endTime || ''; this.openModal(this.dom.addEntryModal); }
+            editEntry(id) { 
+                const entry = this.state.entries.find(e => e.id === id); 
+                if (!entry) return; 
+                document.getElementById('entry-modal-title').textContent = 'Editar Período'; 
+                document.getElementById('entry-id').value = entry.id; 
+                document.getElementById('date-input')._flatpickr.setDate(entry.date, true); 
+                document.getElementById('start-time-input').value = entry.startTime || ''; 
+                document.getElementById('end-time-input').value = entry.endTime || ''; 
+                this.openModal(this.dom.addEntryModal); 
+            }
             initPickers() { flatpickr("#date-input", { dateFormat: "Y-m-d", locale: "pt", altInput: true, altFormat: "d/m/Y" }); }
             
             showPrevMonthDetails() {
@@ -532,8 +611,8 @@
                 const prevMonthYear = prevMonthDate.getFullYear();
 
                 const prevMonthEntries = this.state.entries.filter(e => {
-                    const entryDate = new Date(e.date + 'T00:00:00');
-                    return entryDate.getMonth() === prevMonth && entryDate.getFullYear() === prevMonthYear;
+                    const [year, month] = e.date.split('-').map(Number);
+                    return year === prevMonthYear && (month - 1) === prevMonth;
                 }).sort((a, b) => new Date(b.date) - new Date(a.date));
 
                 const monthNames = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
@@ -617,14 +696,14 @@
 
                 const today=new Date(), cM=today.getMonth(), cY=today.getFullYear();
                 const pMD=new Date(cY,cM-1,1), pM=pMD.getMonth(), pMY=pMD.getFullYear();
-                let wMPM=0; const wDPM=new Set();
-                userData.entries.forEach(e=>{const eD=new Date(e.date+'T00:00:00'); if(eD.getMonth()===pM&&eD.getFullYear()===pMY){wMPM+=TimeTrackerApp.calculateWorkedMinutes(e);wDPM.add(e.date);}});
+                let wMPM=0; 
+                (userData.entries||[]).forEach(e=>{const eD=new Date(e.date+'T00:00:00'); if(eD.getMonth()===pM&&eD.getFullYear()===pMY){wMPM+=TimeTrackerApp.calculateWorkedMinutes(e);}});
                 const mSPrev=new Date(pMY,pM,1), mEPrev=new Date(pMY,pM+1,0); const tWDIMPrev=networkDays(mSPrev,mEPrev,pMY.toString()); const eMPM=tWDIMPrev*(userData.settings.dailyWorkload||8)*60;
                 const bPM=(userData.bonuses||[]).filter(b=>{const bD=new Date(b.date);return bD.getMonth()===pM&&bD.getFullYear()===pMY;}).reduce((a,b)=>a+b.minutes,0);
                 const balancePreviousMonth=wMPM-eMPM+bPM;
                 
                 let workedMinutesThisMonth=0; const wDTM=new Set();
-                userData.entries.forEach(e=>{const eD=new Date(e.date+'T00:00:00'); if(eD.getMonth()===cM&&eD.getFullYear()===cY){workedMinutesThisMonth+=TimeTrackerApp.calculateWorkedMinutes(e);wDTM.add(e.date);}});
+                (userData.entries||[]).forEach(e=>{const eD=new Date(e.date+'T00:00:00'); if(eD.getMonth()===cM&&eD.getFullYear()===cY){workedMinutesThisMonth+=TimeTrackerApp.calculateWorkedMinutes(e);wDTM.add(e.date);}});
                 const dC=wDTM.size; const mS=new Date(cY,cM,1), mE=new Date(cY,cM+1,0); const tWDIM=networkDays(mS,mE,cY.toString()); const expectedMinutesThisMonth=tWDIM*(userData.settings.dailyWorkload||8)*60;
                 const bonificationsThisMonth=(userData.bonuses||[]).filter(b=>{const bD=new Date(b.date);return bD.getMonth()===cM&&bD.getFullYear()===cY;}).reduce((a,b)=>a+b.minutes,0);
                 const currentMonthBalance=workedMinutesThisMonth-(dC*(userData.settings.dailyWorkload||8)*60)+bonificationsThisMonth;
