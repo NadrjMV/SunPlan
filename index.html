@@ -6,90 +6,41 @@
     <title>SunShield Controle de Horas</title>
     <link rel="icon" type="image/png" href="images/SunPlan.png">
     
-    <!-- Google Fonts: Poppins -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     
-    <!-- Feather Icons -->
     <script src="https://unpkg.com/feather-icons"></script>
 
-    <!-- Flatpickr (APENAS para Data) -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <script src="https://npmcdn.com/flatpickr/dist/l10n/pt.js"></script>
 
-    <!-- Firebase SDKs (v9 Compat) -->
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
 
     <style>
-        /*-------------------------------------------------------------------*/
-        /* 1. CONFIGURAÇÃO GLOBAL E VARIÁVEIS DE TEMA
-        /*-------------------------------------------------------------------*/
+        /* ESTILOS (sem alterações, apenas uma pequena adição para o input[type=time]) */
         :root {
             --font-family: 'Poppins', sans-serif;
             --transition-speed: 0.3s;
             --border-radius: 12px;
         }
-
-        /* Tema Escuro Refinado (Padrão) */
         body, body.dark-theme {
-            --bg-primary: #111827;
-            --bg-secondary: #1f2937;
-            --bg-tertiary: rgba(31, 41, 55, 0.7);
-            --accent-primary: #00ddc6;
-            --accent-secondary: #8e44ad;
-            --text-primary: #f9fafb;
-            --text-secondary: #9ca3af;
-            --border-color: rgba(107, 114, 128, 0.3);
-            --shadow-color: rgba(0, 0, 0, 0.2);
-            --success-color: #34d399;
-            --error-color: #f87171;
-            --warning-color: #fbbf24;
+            --bg-primary: #111827; --bg-secondary: #1f2937; --bg-tertiary: rgba(31, 41, 55, 0.7); --accent-primary: #00ddc6; --accent-secondary: #8e44ad; --text-primary: #f9fafb; --text-secondary: #9ca3af; --border-color: rgba(107, 114, 128, 0.3); --shadow-color: rgba(0, 0, 0, 0.2); --success-color: #34d399; --error-color: #f87171; --warning-color: #fbbf24;
         }
-
-        /* Tema Claro */
         body.light-theme {
-            --bg-primary: #f4f7fc;
-            --bg-secondary: #ffffff;
-            --bg-tertiary: rgba(255, 255, 255, 0.7);
-            --accent-primary: #3498db;
-            --accent-secondary: #8e44ad;
-            --text-primary: #2c3e50;
-            --text-secondary: #7f8c8d;
-            --border-color: #e0e0e0;
-            --shadow-color: rgba(0, 0, 0, 0.08);
-            --success-color: #27ae60;
-            --error-color: #c0392b;
-            --warning-color: #f39c12;
+            --bg-primary: #f4f7fc; --bg-secondary: #ffffff; --bg-tertiary: rgba(255, 255, 255, 0.7); --accent-primary: #3498db; --accent-secondary: #8e44ad; --text-primary: #2c3e50; --text-secondary: #7f8c8d; --border-color: #e0e0e0; --shadow-color: rgba(0, 0, 0, 0.08); --success-color: #27ae60; --error-color: #c0392b; --warning-color: #f39c12;
         }
-
         @keyframes fadeIn { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
-
-        /*-------------------------------------------------------------------*/
-        /* 2. ESTILOS BASE E RESET
-        /*-------------------------------------------------------------------*/
         * { margin: 0; padding: 0; box-sizing: border-box; }
         html { scroll-behavior: smooth; }
-        body {
-            font-family: var(--font-family);
-            background-color: var(--bg-primary);
-            color: var(--text-primary);
-            line-height: 1.6;
-            overflow-x: hidden;
-            transition: background-color var(--transition-speed), color var(--transition-speed);
-        }
-
-        /*-------------------------------------------------------------------*/
-        /* 3. PÁGINAS E LAYOUT
-        /*-------------------------------------------------------------------*/
+        body { font-family: var(--font-family); background-color: var(--bg-primary); color: var(--text-primary); line-height: 1.6; overflow-x: hidden; transition: background-color var(--transition-speed), color var(--transition-speed); }
         .page { display: none; }
         .page.active { animation: fadeIn 0.5s ease-out; }
         #app-page.active, #admin-page.active { display: block; }
         .auth-container.active { display: flex; }
-
         .auth-container { justify-content: center; align-items: center; min-height: 100vh; padding: 2rem; }
         .auth-card { width: 100%; max-width: 450px; text-align: center; }
         .auth-card .logo { justify-content: center; margin-bottom: 1rem; }
@@ -97,43 +48,33 @@
         .auth-card p { color: var(--text-secondary); margin-bottom: 2rem; }
         .auth-card .form-footer { margin-top: 1.5rem; }
         .auth-card .form-footer a { color: var(--accent-primary); text-decoration: none; font-weight: 500; cursor: pointer; }
-
         .app-container { padding: 2rem; max-width: 1800px; margin: 0 auto; }
         header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem; }
         .logo { display: flex; align-items: center; gap: 0.8rem; }
         .logo img { height: 40px; }
         .logo h1 { font-size: 1.8rem; font-weight: 600; color: var(--text-primary); }
         .main-content { display: grid; grid-template-columns: 2fr 1.2fr; gap: 2rem; flex-grow: 1; }
-
-        /*-------------------------------------------------------------------*/
-        /* 4. COMPONENTES DE UI
-        /*-------------------------------------------------------------------*/
         .btn { display: inline-flex; justify-content: center; align-items: center; gap: 0.5rem; padding: 0.75rem 1.5rem; border: none; border-radius: var(--border-radius); font-family: var(--font-family); font-weight: 500; font-size: 0.9rem; cursor: pointer; transition: all var(--transition-speed) ease; text-decoration: none; width: 100%; }
         .btn-inline { width: auto; }
         .btn-primary { background: var(--accent-primary); color: var(--bg-primary); box-shadow: 0 4px 15px var(--shadow-color); }
         .btn-primary:hover { transform: translateY(-3px); filter: brightness(1.1); }
         .btn-secondary { background-color: var(--bg-secondary); color: var(--text-primary); border: 1px solid var(--border-color); }
         .btn-secondary:hover { background-color: var(--border-color); }
-
         .card { background-color: var(--bg-secondary); padding: 1.5rem; border-radius: var(--border-radius); border: 1px solid var(--border-color); box-shadow: 0 4px 12px 0 var(--shadow-color); transition: all var(--transition-speed) ease; }
         .card:hover { transform: translateY(-5px); box-shadow: 0 8px 20px 0 var(--shadow-color); }
-
         .input-group { margin-bottom: 1rem; text-align: left; position: relative; }
         .input-group label { display: block; margin-bottom: 0.5rem; font-weight: 500; color: var(--text-secondary); }
         .input-group input { width: 100%; padding: 0.75rem; background-color: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 8px; color: var(--text-primary); font-family: var(--font-family); transition: border-color var(--transition-speed) ease; }
+        /* AJUSTE PARA O SELETOR DE HORA NATIVO */
+        .input-group input[type="time"]::-webkit-calendar-picker-indicator { filter: invert(0); }
+        body.dark-theme .input-group input[type="time"]::-webkit-calendar-picker-indicator { filter: invert(1); }
         .input-group input:focus { outline: none; border-color: var(--accent-primary); box-shadow: 0 0 0 3px var(--shadow-color); }
-        
         .theme-switcher { background: none; border: none; cursor: pointer; color: var(--text-secondary); padding: 0.5rem; }
         .theme-switcher:hover { color: var(--accent-primary); }
-
         .alert { padding: 1rem; margin-bottom: 1rem; border-radius: 8px; display: none; text-align: left; }
         .alert.error { background-color: rgba(248, 113, 113, 0.1); color: var(--error-color); border: 1px solid var(--error-color); }
         .alert.success { background-color: rgba(52, 211, 153, 0.1); color: var(--success-color); border: 1px solid var(--success-color); }
         .alert.warning { background-color: rgba(251, 191, 36, 0.1); color: var(--warning-color); border: 1px solid var(--warning-color); }
-
-        /*-------------------------------------------------------------------*/
-        /* 5. TABELA, DASHBOARD E MODAIS
-        /*-------------------------------------------------------------------*/
         .table-wrapper { overflow-x: auto; flex-grow: 1; }
         .entries-table { width: 100%; border-collapse: collapse; }
         .entries-table th, .entries-table td { padding: 1rem; text-align: left; border-bottom: 1px solid var(--border-color); }
@@ -144,7 +85,6 @@
         .entries-table .action-icon { cursor: pointer; color: var(--text-secondary); transition: color var(--transition-speed) ease; }
         .entries-table .action-icon:hover { color: var(--accent-primary); }
         .entries-table .action-icon.delete:hover { color: var(--error-color); }
-
         .dashboard { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; align-content: start; }
         .metric-card { position: relative; padding: 1.5rem; }
         .metric-card h3 { font-size: 0.9rem; font-weight: 500; color: var(--text-secondary); margin-bottom: 0.5rem; }
@@ -158,7 +98,6 @@
         .holiday-list li { display: flex; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid var(--border-color); font-size: 0.9rem; }
         .holiday-list li:last-child { border-bottom: none; }
         .holiday-list .date { color: var(--accent-primary); font-weight: 500; }
-
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.7); display: none; justify-content: center; align-items: center; z-index: 1000; opacity: 0; transition: opacity var(--transition-speed) ease; }
         .modal-overlay.visible { display: flex; opacity: 1; }
         body.dark-theme .modal-overlay { backdrop-filter: blur(8px); }
@@ -169,62 +108,18 @@
         .close-modal { cursor: pointer; color: var(--text-secondary); transition: color var(--transition-speed) ease, transform var(--transition-speed) ease; }
         .close-modal:hover { color: var(--accent-primary); transform: rotate(90deg); }
         .modal-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
-
-        /*-------------------------------------------------------------------*/
-        /* 6. SELETOR DE HORÁRIO CUSTOMIZADO
-        /*-------------------------------------------------------------------*/
-        .time-picker {
-            position: absolute;
-            background-color: var(--bg-secondary);
-            border: 1px solid var(--border-color);
-            border-radius: var(--border-radius);
-            box-shadow: 0 8px 20px 0 var(--shadow-color);
-            z-index: 1001;
-            display: none;
-            width: 200px;
-            height: 250px;
-            overflow: hidden;
-            flex-direction: row;
-        }
-        .time-picker.visible { display: flex; }
-        .time-picker-column {
-            width: 50%;
-            height: 100%;
-            overflow-y: auto;
-            -ms-overflow-style: none;
-            scrollbar-width: none;
-        }
-        .time-picker-column::-webkit-scrollbar { display: none; }
-        .time-picker-column:first-child { border-right: 1px solid var(--border-color); }
-        .time-picker-item {
-            padding: 0.75rem;
-            text-align: center;
-            cursor: pointer;
-            transition: background-color var(--transition-speed);
-        }
-        .time-picker-item:hover { background-color: var(--border-color); }
-        .time-picker-item.selected { background-color: var(--accent-primary); color: var(--bg-primary); font-weight: 600; }
-
-        /*-------------------------------------------------------------------*/
-        /* 7. ADMIN VIEW
-        /*-------------------------------------------------------------------*/
         .user-list { list-style: none; }
         .user-list-item { display: flex; justify-content: space-between; align-items: center; padding: 1rem; border-radius: var(--border-radius); transition: background-color var(--transition-speed) ease; cursor: pointer; }
         .user-list-item:hover { background-color: var(--border-color); }
         .user-info .email { font-size: 0.8rem; color: var(--text-secondary); }
         .user-role { background-color: var(--accent-primary); color: var(--bg-primary); padding: 0.2rem 0.6rem; border-radius: 20px; font-size: 0.7rem; font-weight: 600; }
         #user-details-content .main-content { grid-template-columns: 1.5fr 1fr; }
-
-        /*-------------------------------------------------------------------*/
-        /* 8. RESPONSIVIDADE
-        /*-------------------------------------------------------------------*/
         @media (max-width: 1200px) { .main-content, #user-details-content .main-content { grid-template-columns: 1fr; } }
         @media (max-width: 768px) { .app-container { padding: 1rem; } header { flex-direction: column; align-items: stretch; } .dashboard { grid-template-columns: 1fr 1fr; } .modal-grid { grid-template-columns: 1fr; } }
     </style>
 </head>
 <body>
 
-    <!-- PÁGINA DE LOGIN -->
     <div id="login-page" class="page auth-container">
         <div class="card auth-card">
             <div class="logo">
@@ -245,7 +140,6 @@
         </div>
     </div>
 
-    <!-- PÁGINA DE REGISTRO -->
     <div id="register-page" class="page auth-container">
         <div class="card auth-card">
              <div class="logo"><img src="images/SunPlan.png" alt="SunShield Logo"><h1>SunPlan</h1></div>
@@ -264,7 +158,6 @@
         </div>
     </div>
     
-    <!-- PÁGINA DE ESQUECI A SENHA -->
     <div id="forgot-password-page" class="page auth-container">
         <div class="card auth-card">
              <div class="logo"><img src="images/SunPlan.png" alt="SunShield Logo"><h1>SunPlan</h1></div>
@@ -281,16 +174,14 @@
         </div>
     </div>
 
-    <!-- PÁGINA DO FUNCIONÁRIO -->
     <div id="app-page" class="page">
         <div class="app-container">
             <header>
-                <div> <!-- Container para agrupar logo e subtítulo -->
+                <div>
                     <div class="logo">
                          <img src="images/SunPlan.png" alt="SunShield Logo">
                         <h1>SunShield Controle de Horas</h1>
                     </div>
-                    <!-- TÍTULO DO MÊS ATUAL (MOVIMENTEI PARA CÁ) -->
                     <h2 style="font-weight: 500; font-size: 1.2rem; color: var(--text-secondary); margin-left: 52px; margin-top: -10px;" id="current-month-display"></h2>
                 </div>
                 <div class="header-actions">
@@ -325,7 +216,6 @@
                     </div>
                     <div class="metric-card">
                         <i class="icon" data-feather="archive"></i><h3>Banco Mês Anterior</h3><div class="value" id="prev-month-balance">00:00</div>
-                        <!-- BOTÃO "VER DETALHES" ESTILIZADO -->
                         <button id="open-prev-month-modal" class="btn btn-secondary" style="width: auto; padding: 0.4rem 0.8rem; font-size: 0.75rem; margin-top: 0.75rem;">
                             <i data-feather="calendar" style="width: 14px; height: 14px;"></i>
                             <span>Ver Detalhes</span>
@@ -351,7 +241,6 @@
         </div>
     </div>
     
-    <!-- PÁGINA DO ADMIN -->
     <div id="admin-page" class="page">
         <div class="app-container">
             <header>
@@ -367,15 +256,12 @@
             <main>
                 <section class="card">
                     <h2>Funcionários</h2>
-                    <ul id="user-list" class="user-list">
-                        <!-- Lista de usuários será populada aqui -->
-                    </ul>
+                    <ul id="user-list" class="user-list"></ul>
                 </section>
             </main>
         </div>
     </div>
 
-    <!-- MODAIS -->
     <div class="modal-overlay" id="add-entry-modal">
         <div class="modal-content">
             <div class="modal-header"><h2 id="entry-modal-title">Novo Período de Trabalho</h2><i data-feather="x" class="close-modal"></i></div>
@@ -384,8 +270,8 @@
                 <div id="add-entry-alert" class="alert"></div>
                 <div class="input-group"><label for="date-input">Data</label><input type="text" id="date-input" required placeholder="Selecione uma data..."></div>
                 <div class="modal-grid">
-                    <div class="input-group"><label for="start-time-input">Entrada</label><input type="text" id="start-time-input" class="time-input" readonly required></div>
-                    <div class="input-group"><label for="end-time-input">Saída</label><input type="text" id="end-time-input" class="time-input" readonly required></div>
+                    <div class="input-group"><label for="start-time-input">Entrada</label><input type="time" id="start-time-input" required></div>
+                    <div class="input-group"><label for="end-time-input">Saída</label><input type="time" id="end-time-input" required></div>
                 </div>
                 <button type="submit" class="btn btn-primary">Salvar</button>
             </form>
@@ -406,7 +292,7 @@
         <div class="modal-content">
             <div class="modal-header"><h2>Adicionar Horas Abonadas</h2><i data-feather="x" class="close-modal"></i></div>
             <form id="bonified-form">
-                <div class="input-group"><label for="bonified-hours-input">Horas a Adicionar (HH:MM)</label><input type="text" id="bonified-hours-input" class="time-input" readonly placeholder="00:00" required></div>
+                <div class="input-group"><label for="bonified-hours-input">Horas a Adicionar (HH:MM)</label><input type="time" id="bonified-hours-input" placeholder="00:00" required></div>
                 <div class="input-group"><label for="bonified-description">Descrição (Opcional)</label><input type="text" id="bonified-description" placeholder="Ex: Compensação feriado X"></div>
                 <button type="submit" class="btn btn-primary">Adicionar Bônus</button>
             </form>
@@ -415,44 +301,30 @@
 
     <div class="modal-overlay" id="user-details-modal">
         <div class="modal-content modal-lg">
-            <div class="modal-header">
-                <h2 id="user-details-title">Detalhes do Funcionário</h2>
-                <i data-feather="x" class="close-modal"></i>
-            </div>
-            <div id="user-details-content">
-                <!-- Conteúdo dinâmico do dashboard do usuário -->
-            </div>
+            <div class="modal-header"><h2 id="user-details-title">Detalhes do Funcionário</h2><i data-feather="x" class="close-modal"></i></div>
+            <div id="user-details-content"></div>
         </div>
     </div>
 
-    <!-- MODAL PARA DETALHES DO MÊS ANTERIOR -->
     <div class="modal-overlay" id="prev-month-modal">
         <div class="modal-content">
-            <div class="modal-header">
-                <h2 id="prev-month-modal-title">Detalhes do Mês Anterior</h2>
-                <i data-feather="x" class="close-modal"></i>
-            </div>
+            <div class="modal-header"><h2 id="prev-month-modal-title">Detalhes do Mês Anterior</h2><i data-feather="x" class="close-modal"></i></div>
             <div class="table-wrapper" style="max-height: 400px;">
                 <table class="entries-table">
-                    <thead>
-                        <tr><th>Data</th><th>Entrada</th><th>Saída</th><th>Duração</th></tr>
-                    </thead>
-                    <tbody id="prev-month-tbody">
-                        <!-- Lançamentos do mês anterior serão inseridos aqui via JS -->
-                    </tbody>
+                    <thead><tr><th>Data</th><th>Entrada</th><th>Saída</th><th>Duração</th></tr></thead>
+                    <tbody id="prev-month-tbody"></tbody>
                 </table>
             </div>
         </div>
     </div>
 
-
     <script>
-    // PONTO DE INTEGRAÇÃO FIREBASE: Insira sua configuração do Firebase aqui
+    // PONTO DE INTEGRAÇÃO FIREBASE
     const firebaseConfig = {
         apiKey: "AIzaSyAMdc9DWxU0P3OEjGglMVwNbyrB-rwySSw",
         authDomain: "sunwork-15a7b.firebaseapp.com",
         projectId: "sunwork-15a7b",
-        storageBucket: "sunwork-15a7b.firebasestorage.app",
+        storageBucket: "sunwork-15a7b.appspot.com",
         messagingSenderId: "1096734655719",
         appId: "1:1096734655719:web:1cdffb2241542d000cce42",
         measurementId: "G-EK7NXGM4EV"
@@ -594,73 +466,6 @@
             window.adminInstance.init();
         }
 
-        class TimePicker {
-            constructor(inputElement) {
-                this.input = inputElement;
-                this.picker = this.createPickerElement();
-                this.input.parentElement.appendChild(this.picker);
-                this.addEventListeners();
-            }
-
-            createPickerElement() {
-                const picker = document.createElement('div');
-                picker.className = 'time-picker';
-                const hoursCol = document.createElement('div');
-                hoursCol.className = 'time-picker-column';
-                for (let i = 0; i < 24; i++) {
-                    const item = document.createElement('div');
-                    item.className = 'time-picker-item';
-                    item.textContent = String(i).padStart(2, '0');
-                    item.dataset.value = String(i).padStart(2, '0');
-                    hoursCol.appendChild(item);
-                }
-                const minutesCol = document.createElement('div');
-                minutesCol.className = 'time-picker-column';
-                for (let i = 0; i < 60; i += 5) {
-                    const item = document.createElement('div');
-                    item.className = 'time-picker-item';
-                    item.textContent = String(i).padStart(2, '0');
-                    item.dataset.value = String(i).padStart(2, '0');
-                    minutesCol.appendChild(item);
-                }
-                picker.appendChild(hoursCol);
-                picker.appendChild(minutesCol);
-                return picker;
-            }
-
-            addEventListeners() {
-                this.input.addEventListener('focus', () => this.show());
-                document.addEventListener('click', (e) => {
-                    if (!this.picker.contains(e.target) && e.target !== this.input) {
-                        this.hide();
-                    }
-                });
-                this.picker.addEventListener('click', (e) => {
-                    const item = e.target.closest('.time-picker-item');
-                    if (!item) return;
-
-                    const column = item.parentElement;
-                    const currentValue = this.input.value.split(':');
-                    let hour = currentValue[0] || '00';
-                    let minute = currentValue[1] || '00';
-
-                    Array.from(column.children).forEach(child => child.classList.remove('selected'));
-                    item.classList.add('selected');
-
-                    if (column === this.picker.children[0]) { // Hour column
-                        hour = item.dataset.value;
-                    } else { // Minute column
-                        minute = item.dataset.value;
-                        this.hide();
-                    }
-                    this.input.value = `${hour}:${minute}`;
-                });
-            }
-
-            show() { this.picker.classList.add('visible'); }
-            hide() { this.picker.classList.remove('visible'); }
-        }
-
         class TimeTrackerApp {
             constructor(user) { this.user = user; this.state = { entries: [], settings: { dailyWorkload: 8 }, bonuses: [] }; this.unsubscribe = null; this.userDocRef = user ? db.collection('users').doc(user.uid) : null; this.dom = {}; this.holidays = { '2025': [ {date: '2025-01-01', name: 'Confraternização Universal'}, {date: '2025-03-04', name: 'Carnaval'}, {date: '2025-04-18', name: 'Paixão de Cristo'}, {date: '2025-04-21', name: 'Tiradentes'}, {date: '2025-05-01', name: 'Dia do Trabalho'}, {date: '2025-06-19', name: 'Corpus Christi'}, {date: '2025-09-07', name: 'Independência do Brasil'}, {date: '2025-10-12', name: 'Nossa Senhora Aparecida'}, {date: '2025-11-02', name: 'Finados'}, {date: '2025-11-15', name: 'Proclamação da República'}, {date: '2025-12-25', name: 'Natal'} ], '2026': [ {date: '2026-01-01', name: 'Confraternização Universal'}, {date: '2026-02-17', name: 'Carnaval'}, {date: '2026-04-03', name: 'Paixão de Cristo'}, {date: '2026-04-21', name: 'Tiradentes'}, {date: '2026-05-01', name: 'Dia do Trabalho'}, {date: '2026-06-04', name: 'Corpus Christi'}, {date: '2026-09-07', name: 'Independência do Brasil'}, {date: '2026-10-12', name: 'Nossa Senhora Aparecida'}, {date: '2026-11-02', name: 'Finados'}, {date: '2026-11-15', name: 'Proclamação da República'}, {date: '2026-12-25', name: 'Natal'} ] }; }
             init() { this.selectDOMElements(); this.addEventListeners(); this.initPickers(); this.listenForData(); }
@@ -718,7 +523,7 @@
             }
             deleteEntry(id) { this.state.entries = this.state.entries.filter(e => e.id !== id); this.saveData(); }
             editEntry(id) { const entry = this.state.entries.find(e => e.id === id); if (!entry) return; document.getElementById('entry-modal-title').textContent = 'Editar Período'; document.getElementById('entry-id').value = entry.id; document.getElementById('date-input')._flatpickr.setDate(entry.date, true); document.getElementById('start-time-input').value = entry.startTime || ''; document.getElementById('end-time-input').value = entry.endTime || ''; this.openModal(this.dom.addEntryModal); }
-            initPickers() { flatpickr("#date-input", { dateFormat: "Y-m-d", locale: "pt", altInput: true, altFormat: "d/m/Y" }); document.querySelectorAll(".time-input").forEach(el => new TimePicker(el)); }
+            initPickers() { flatpickr("#date-input", { dateFormat: "Y-m-d", locale: "pt", altInput: true, altFormat: "d/m/Y" }); }
             
             showPrevMonthDetails() {
                 const today = new Date();
@@ -786,8 +591,7 @@
                             </div>
                         </section>
                         <aside class="dashboard">
-                            <!-- Cards de métricas serão gerados aqui -->
-                        </aside>
+                            </aside>
                     </main>
                 `;
                 this.dom.userDetailsContent.innerHTML = dashboardHTML;
