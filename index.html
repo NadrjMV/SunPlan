@@ -61,7 +61,7 @@
         .btn-secondary { background-color: var(--bg-secondary); color: var(--text-primary); border: 1px solid var(--border-color); }
         .btn-secondary:hover { background-color: var(--border-color); }
         .card { background-color: var(--bg-secondary); padding: 1.5rem; border-radius: var(--border-radius); border: 1px solid var(--border-color); box-shadow: 0 4px 12px 0 var(--shadow-color); transition: all var(--transition-speed) ease; }
-        .card:hover { transform: translateY(-5px); box-shadow: 8px 20px 0 var(--shadow-color); }
+        .card:hover { transform: translateY(-5px); box-shadow: 0 8px 20px 0 var(--shadow-color); }
         .input-group { margin-bottom: 1rem; text-align: left; position: relative; }
         .input-group label { display: block; margin-bottom: 0.5rem; font-weight: 500; color: var(--text-secondary); }
         .input-group input { width: 100%; padding: 0.75rem; background-color: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 8px; color: var(--text-primary); font-family: var(--font-family); transition: border-color var(--transition-speed) ease; }
@@ -287,15 +287,30 @@
             }
             .metric-card {
                 grid-column: 1 / -1; /* Ocupa a largura total (1 coluna) */
+                /* RETOQUE: Diminui padding dos cards de métricas */
+                padding: 1rem; 
             }
-            /* Dias cumpridos ficam com 3 colunas, mas dentro do card de 100% */
-            .days-summary-card { 
+            .metric-card h3 {
+                font-size: 0.8rem; /* Retoque: Diminui título da métrica */
+            }
+            .metric-card .value {
+                font-size: 1.5rem; /* Retoque: Diminui o valor principal */
+            }
+
+            /* Dias cumpridos e feriados */
+            .days-summary-card, .holiday-card {
                 grid-column: 1 / -1; 
+                /* RETOQUE: Diminui padding dos cards de resumo/feriados */
                 padding: 0.75rem; 
             }
-            .holiday-card {
-                grid-column: 1 / -1; 
-                padding: 0.75rem;
+            .days-summary-card { 
+                grid-template-columns: repeat(3, 1fr); 
+            }
+            .holiday-card h3 {
+                font-size: 1rem; /* Retoque: Diminui título de feriados */
+            }
+            .holiday-list li {
+                font-size: 0.85rem; /* Retoque: Diminui lista de feriados */
             }
             
             /* Ajuste de densidade da tabela para telas muito pequenas */
@@ -303,14 +318,17 @@
                 min-width: 450px; /* Reduz largura mínima, mas mantém a rolagem horizontal */
             }
             .entries-table th, .entries-table td {
-                padding: 0.5rem; /* Máxima compressão vertical e horizontal */
-                font-size: 0.75rem; /* Diminui a fonte da tabela */
+                padding: 0.5rem; 
+                font-size: 0.75rem; 
             }
             
-            /* Ajuste do modal de punch */
+            /* RETOQUE: Ajuste do modal de punch (tamanho do texto) */
             #punch-modal .modal-content {
                 padding-top: 4rem;
                 min-height: 70vh;
+            }
+            #punch-modal .modal-header h2 {
+                font-size: 1.25rem; /* Título do modal menor */
             }
             #punch-modal #punch-button {
                 width: 180px;
@@ -318,7 +336,10 @@
                 font-size: 1.25rem;
             }
             #punch-modal #punch-next-action {
-                font-size: 1.8rem;
+                font-size: 1.8rem; /* Texto principal do ponto menor */
+            }
+            #punch-modal #punch-next-time-info {
+                font-size: 1rem; /* Texto de descrição menor */
             }
         }
     </style>
