@@ -21,7 +21,7 @@
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
 
     <style>
-        /* ESTILOS (sem alterações, apenas uma pequena adição para o input[type=time]) */
+        /* ESTILOS */
         :root {
             --font-family: 'Poppins', sans-serif;
             --transition-speed: 0.3s;
@@ -65,7 +65,6 @@
         .input-group { margin-bottom: 1rem; text-align: left; position: relative; }
         .input-group label { display: block; margin-bottom: 0.5rem; font-weight: 500; color: var(--text-secondary); }
         .input-group input { width: 100%; padding: 0.75rem; background-color: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 8px; color: var(--text-primary); font-family: var(--font-family); transition: border-color var(--transition-speed) ease; }
-        /* AJUSTE PARA O SELETOR DE HORA NATIVO */
         .input-group input[type="time"]::-webkit-calendar-picker-indicator { filter: invert(0); }
         body.dark-theme .input-group input[type="time"]::-webkit-calendar-picker-indicator { filter: invert(1); }
         .input-group input:focus { outline: none; border-color: var(--accent-primary); box-shadow: 0 0 0 3px var(--shadow-color); }
@@ -185,6 +184,8 @@
                     <h2 style="font-weight: 500; font-size: 1.2rem; color: var(--text-secondary); margin-left: 52px; margin-top: -10px;" id="current-month-display"></h2>
                 </div>
                 <div class="header-actions">
+                    <button class="btn btn-inline btn-secondary" id="app-to-admin-btn" style="display: none;" title="Voltar ao Admin Painel"><i data-feather="shield"></i> Admin</button>
+                    
                     <button class="theme-switcher"></button>
                     <button class="btn btn-inline btn-secondary" id="open-settings-modal" title="Configurações"><i data-feather="settings"></i></button>
                     <button class="btn btn-inline btn-secondary" id="open-bonified-modal" title="Adicionar Horas Abonadas"><i data-feather="gift"></i></button>
@@ -249,6 +250,8 @@
                     <h1>Painel do Administrador</h1>
                 </div>
                 <div class="header-actions">
+                    <button class="btn btn-inline btn-primary" id="admin-to-app-btn" title="Meus Registros"><i data-feather="clock"></i> Meus Registros</button>
+                    
                     <button class="theme-switcher"></button>
                     <button class="btn btn-inline btn-secondary" id="admin-logout-btn" title="Sair"><i data-feather="log-out"></i></button>
                 </div>
@@ -268,9 +271,12 @@
             <form id="add-entry-form">
                 <input type="hidden" id="entry-id">
                 <div id="add-entry-alert" class="alert"></div>
-                    <div class="input-group"><label for="date-input">Data</label><input type="date" id="date-input" required></div>                <div class="modal-grid">
+                <div class="input-group"><label for="date-input">Data</label><input type="date" id="date-input" required></div>
+                <div class="modal-grid">
                     <div class="input-group"><label for="start-time-input">Entrada</label><input type="time" id="start-time-input" required></div>
-                    <div class="input-group"><label for="end-time-input">Saída</label><input type="time" id="end-time-input" required></div>
+                    <div class="input-group"><label for="lunch-start-input">Saída Almoço</label><input type="time" id="lunch-start-input"></div>
+                    <div class="input-group"><label for="lunch-end-input">Volta Almoço</label><input type="time" id="lunch-end-input"></div>
+                    <div class="input-group"><label for="end-time-input">Saída Geral</label><input type="time" id="end-time-input" required></div>
                 </div>
                 <button type="submit" class="btn btn-primary">Salvar</button>
             </form>
@@ -346,6 +352,13 @@
         document.getElementById('show-forgot-password').addEventListener('click', (e) => { e.preventDefault(); showPage('forgot-password-page'); });
         document.getElementById('show-login-from-register').addEventListener('click', (e) => { e.preventDefault(); showPage('login-page'); });
         document.getElementById('show-login-from-forgot').addEventListener('click', (e) => { e.preventDefault(); showPage('login-page'); });
+        
+        // EVENTOS DE NAVEGAÇÃO ENTRE ADMIN E APP
+        const btnAdminToApp = document.getElementById('admin-to-app-btn');
+        const btnAppToAdmin = document.getElementById('app-to-admin-btn');
+
+        btnAdminToApp.addEventListener('click', () => showPage('app-page'));
+        btnAppToAdmin.addEventListener('click', () => showPage('admin-page'));
         
         const applyTheme = (theme) => {
             document.body.className = theme;
@@ -433,13 +446,25 @@
         document.getElementById('admin-logout-btn').addEventListener('click', logout);
 
         auth.onAuthStateChanged(user => {
+            // Esconde o botão de voltar ao admin por padrão ao mudar estado de auth
+            btnAppToAdmin.style.display = 'none';
+
             if (user) {
                 db.collection('users').doc(user.uid).get().then(doc => {
                     const userData = doc.exists ? doc.data() : {};
+                    
                     if (userData.role === 'admin') {
+                        // SE FOR ADMIN: INICIALIZA AMBOS OS APPS
                         if (!window.adminInstance) initializeAdminApp(user);
+                        if (!window.appInstance) initializeEmployeeApp(user);
+                        
+                        // Mostra o botão de "Voltar ao Admin" na tela do App
+                        btnAppToAdmin.style.display = 'inline-flex';
+                        
+                        // Mostra painel de admin por padrão
                         showPage('admin-page');
                     } else {
+                        // SE FOR FUNCIONÁRIO: INICIALIZA APENAS O APP
                         if (!window.appInstance) initializeEmployeeApp(user);
                         showPage('app-page');
                     }
@@ -470,8 +495,6 @@
             init() { this.selectDOMElements(); this.addEventListeners(); this.listenForData(); }            cleanup() { if (this.unsubscribe) this.unsubscribe(); }
             selectDOMElements() {
                 const app = document.getElementById('app-page'); this.dom = { entriesTbody: app.querySelector('#entries-tbody'), addEntryModal: document.getElementById('add-entry-modal'), addEntryForm: document.getElementById('add-entry-form'), settingsModal: document.getElementById('settings-modal'), openSettingsModalBtn: app.querySelector('#open-settings-modal'), settingsForm: document.getElementById('settings-form'), bonifiedModal: document.getElementById('bonified-modal'), openBonifiedModalBtn: app.querySelector('#open-bonified-modal'), bonifiedForm: document.getElementById('bonified-form'), timeBalanceEl: app.querySelector('#time-balance'), workedHoursEl: app.querySelector('#worked-hours'), expectedHoursEl: app.querySelector('#expected-hours'), prevMonthBalanceEl: app.querySelector('#prev-month-balance'), bonifiedHoursDisplayEl: app.querySelector('#bonified-hours-display'), currentMonthBalanceEl: app.querySelector('#current-month-balance'), daysCompletedEl: app.querySelector('#days-completed'), daysTotalEl: app.querySelector('#days-total'), daysRemainingEl: app.querySelector('#days-remaining'), holidayListEl: app.querySelector('#holiday-list'), addEntryBtn: app.querySelector('#add-entry-btn'), currentMonthDisplay: document.getElementById('current-month-display'), prevMonthModal: document.getElementById('prev-month-modal'), openPrevMonthModalBtn: document.getElementById('open-prev-month-modal'),
-                // *** CORREÇÃO APLICADA AQUI ***
-                // Seleciona o input de data e inicializa o flatpickr nele
                 dateInput: flatpickr(document.getElementById('date-input'), { dateFormat: "Y-m-d", locale: "pt" })
                 };
             }
@@ -479,7 +502,17 @@
             saveData() { if(this.userDocRef) this.userDocRef.set({ trackerData: this.state }, { merge: true }).catch(console.error); }
             static timeToMinutes(str) { if (!str) return 0; const [h, m] = str.split(':').map(Number); return (h||0)*60 + (m||0); }
             static formatMinutesToHHMM(mins) { if(isNaN(mins)) return '00:00'; const s=mins<0?'-':''; const a=Math.abs(mins); const h=Math.floor(a/60); const m=Math.round(a%60); return `${s}${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`; }
-            static calculateWorkedMinutes(e) { if(!e.startTime||!e.endTime)return 0; return TimeTrackerApp.timeToMinutes(e.endTime)-TimeTrackerApp.timeToMinutes(e.startTime); }
+            
+            static calculateWorkedMinutes(e) { 
+                if(!e.startTime || !e.endTime) return 0; 
+                let total = TimeTrackerApp.timeToMinutes(e.endTime) - TimeTrackerApp.timeToMinutes(e.startTime);
+                if (e.lunchStartTime && e.lunchEndTime) {
+                    const lunch = TimeTrackerApp.timeToMinutes(e.lunchEndTime) - TimeTrackerApp.timeToMinutes(e.lunchStartTime);
+                    total = total - lunch;
+                }
+                return total; 
+            }
+
             networkDays(start, end, year) { let c=0; let cur=new Date(start.getTime()); const hS=new Set((this.holidays[year]||[]).map(h => h.date)); while(cur<=end){const d=cur.getDay(); const dS=cur.toISOString().split('T')[0]; if(d!==0&&d!==6&&!hS.has(dS))c++; cur.setDate(cur.getDate()+1);} return c;}
             render() { this.renderTable(); this.renderDashboard(); this.renderHolidays(); feather.replace(); }
             
@@ -520,21 +553,43 @@
                 this.dom.addEntryBtn.addEventListener('click', () => { document.getElementById('entry-modal-title').textContent = 'Novo Período de Trabalho'; this.dom.addEntryForm.reset(); document.getElementById('entry-id').value = ''; this.openModal(this.dom.addEntryModal); });
                 this.dom.openSettingsModalBtn.addEventListener('click', () => { document.getElementById('daily-workload').value = this.state.settings.dailyWorkload; this.openModal(this.dom.settingsModal); });
                 this.dom.openBonifiedModalBtn.addEventListener('click', () => { this.dom.bonifiedForm.reset(); this.openModal(this.dom.bonifiedModal); });
-                this.dom.addEntryForm.addEventListener('submit', e => { e.preventDefault(); const entryId = document.getElementById('entry-id').value; const newEntryData = { date:document.getElementById('date-input').value,startTime:document.getElementById('start-time-input').value,endTime:document.getElementById('end-time-input').value}; if (entryId) { const index = this.state.entries.findIndex(entry => entry.id === entryId); if (index > -1) this.state.entries[index] = { ...this.state.entries[index], ...newEntryData }; } else { this.state.entries.push({id:`entry_${Date.now()}`,...newEntryData}); } this.saveData(); this.closeModal(this.dom.addEntryModal); e.target.reset(); });
+                
+                this.dom.addEntryForm.addEventListener('submit', e => { 
+                    e.preventDefault(); 
+                    const entryId = document.getElementById('entry-id').value; 
+                    const newEntryData = { 
+                        date: document.getElementById('date-input').value,
+                        startTime: document.getElementById('start-time-input').value,
+                        lunchStartTime: document.getElementById('lunch-start-input').value, 
+                        lunchEndTime: document.getElementById('lunch-end-input').value,
+                        endTime: document.getElementById('end-time-input').value
+                    }; 
+                    if (entryId) { 
+                        const index = this.state.entries.findIndex(entry => entry.id === entryId); 
+                        if (index > -1) this.state.entries[index] = { ...this.state.entries[index], ...newEntryData }; 
+                    } else { 
+                        this.state.entries.push({id:`entry_${Date.now()}`,...newEntryData}); 
+                    } 
+                    this.saveData(); 
+                    this.closeModal(this.dom.addEntryModal); 
+                    e.target.reset(); 
+                });
+
                 this.dom.settingsForm.addEventListener('submit', e => { e.preventDefault(); this.state.settings.dailyWorkload = parseFloat(document.getElementById('daily-workload').value); this.saveData(); this.closeModal(this.dom.settingsModal); });
                 this.dom.bonifiedForm.addEventListener('submit', e => { e.preventDefault(); this.state.bonuses.push({id:`bonus_${Date.now()}`,date:new Date().toISOString().split('T')[0],minutes:TimeTrackerApp.timeToMinutes(document.getElementById('bonified-hours-input').value),description:document.getElementById('bonified-description').value}); this.saveData(); this.closeModal(this.dom.bonifiedModal); e.target.reset(); });
                 this.dom.openPrevMonthModalBtn.addEventListener('click', (e) => { e.preventDefault(); this.showPrevMonthDetails(); });
             }
             deleteEntry(id) { this.state.entries = this.state.entries.filter(e => e.id !== id); this.saveData(); }
+            
             editEntry(id) { 
                 const entry = this.state.entries.find(e => e.id === id); 
                 if (!entry) return; 
                 document.getElementById('entry-modal-title').textContent = 'Editar Período'; 
                 document.getElementById('entry-id').value = entry.id; 
-                // *** CORREÇÃO APLICADA AQUI ***
-                // Acessa a instância do flatpickr através do elemento DOM que agora a possui
                 this.dom.dateInput.setDate(entry.date, true);
                 document.getElementById('start-time-input').value = entry.startTime || ''; 
+                document.getElementById('lunch-start-input').value = entry.lunchStartTime || '';
+                document.getElementById('lunch-end-input').value = entry.lunchEndTime || '';
                 document.getElementById('end-time-input').value = entry.endTime || ''; 
                 this.openModal(this.dom.addEntryModal); 
             }
