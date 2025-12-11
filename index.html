@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>SunShield Controle de Horas</title>
     <link rel="icon" type="image/png" href="images/SunPlan.png">
     
@@ -61,7 +61,7 @@
         .btn-secondary { background-color: var(--bg-secondary); color: var(--text-primary); border: 1px solid var(--border-color); }
         .btn-secondary:hover { background-color: var(--border-color); }
         .card { background-color: var(--bg-secondary); padding: 1.5rem; border-radius: var(--border-radius); border: 1px solid var(--border-color); box-shadow: 0 4px 12px 0 var(--shadow-color); transition: all var(--transition-speed) ease; }
-        .card:hover { transform: translateY(-5px); box-shadow: 0 8px 20px 0 var(--shadow-color); }
+        .card:hover { transform: translateY(-5px); box-shadow: 8px 20px 0 var(--shadow-color); }
         .input-group { margin-bottom: 1rem; text-align: left; position: relative; }
         .input-group label { display: block; margin-bottom: 0.5rem; font-weight: 500; color: var(--text-secondary); }
         .input-group input { width: 100%; padding: 0.75rem; background-color: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 8px; color: var(--text-primary); font-family: var(--font-family); transition: border-color var(--transition-speed) ease; }
@@ -84,6 +84,7 @@
         .entries-table .action-icon { cursor: pointer; color: var(--text-secondary); transition: color var(--transition-speed) ease; }
         .entries-table .action-icon:hover { color: var(--accent-primary); }
         .entries-table .action-icon.delete:hover { color: var(--error-color); }
+        /* Dashboard padrão (Desktop) */
         .dashboard { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; align-content: start; }
         .metric-card { position: relative; padding: 1.5rem; }
         .metric-card h3 { font-size: 0.9rem; font-weight: 500; color: var(--text-secondary); margin-bottom: 0.5rem; }
@@ -118,13 +119,13 @@
         #punch-modal .modal-content {
             max-width: none; 
             width: 90%; 
-            min-height: 80vh; /* Para garantir o preenchimento vertical em telas grandes */
+            min-height: 80vh; 
             display: flex; 
             flex-direction: column; 
             justify-content: center; 
             align-items: center; 
             background: var(--bg-primary); 
-            padding-top: 5rem; /* Espaço para o header */
+            padding-top: 5rem; 
         }
         #punch-modal #punch-button {
             width: 250px;
@@ -156,18 +157,168 @@
 
 
         @media (max-width: 1200px) { .main-content, #user-details-content .main-content { grid-template-columns: 1fr; } }
+        
+        /* OTIMIZAÇÃO GERAL PARA TABLET (Max-width 768px) */
         @media (max-width: 768px) { 
             .app-container { padding: 1rem; } 
-            header { flex-direction: column; align-items: stretch; } 
-            .dashboard { grid-template-columns: 1fr 1fr; } 
+            
+            header { 
+                flex-direction: column; 
+                align-items: flex-start; 
+                gap: 0.5rem;
+            } 
+
+            /* NOVO ENCAPSULAMENTO PARA BOTÕES PRINCIPAIS EM MOBILE */
+            .main-actions-group {
+                display: flex;
+                gap: 0.5rem;
+                width: 100%;
+                margin-bottom: 0.5rem; 
+                order: -1; 
+            }
+            
+            #open-punch-modal, 
+            #add-entry-btn {
+                flex: 1 1 0%; 
+                width: auto; 
+            }
+            
+            /* REESTRUTURAÇÃO DO .header-actions para lidar APENAS com os ícones */
+            .header-actions {
+                display: flex;
+                flex-wrap: nowrap; 
+                gap: 0.5rem;
+                width: 100%;
+                margin-top: 0;
+                justify-content: space-between;
+                display: grid;
+                /* 5 Botões de Ícone: Admin/Tema/Settings/Bonified/Logout */
+                grid-template-columns: repeat(5, 1fr); 
+            }
+
+            .header-actions #open-punch-modal, 
+            .header-actions #add-entry-btn {
+                display: none; 
+            }
+
+            .header-actions .btn-inline, 
+            .header-actions .theme-switcher {
+                padding: 0.75rem; 
+                height: 48px; 
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                width: 100%;
+                grid-column: span 1; 
+            }
+            #logout-btn {
+                 grid-column: span 1; 
+                 flex: 1 1 auto;
+            }
+
+            .header-actions .btn-inline span {
+                display: none;
+            }
+            
+            #admin-page .header-actions {
+                grid-template-columns: 1fr 1fr 1fr; 
+            }
+            #admin-page #admin-to-app-btn {
+                grid-column: span 2; 
+                display: flex; 
+            }
+            #admin-page #admin-to-app-btn span {
+                display: initial;
+            }
+            #admin-page #admin-logout-btn {
+                grid-column: span 1; 
+            }
+
+            .main-content { 
+                grid-template-columns: 1fr; 
+                gap: 1.5rem;
+            }
+
+            /* Dashboard em 2 colunas para tablets/mobile maiores */
+            .dashboard { 
+                grid-template-columns: 1fr 1fr; 
+                gap: 1rem; 
+            } 
+            .metric-card {
+                grid-column: span 1;
+            }
+            .days-summary-card, .holiday-card {
+                grid-column: 1 / -1; 
+                padding: 1rem 0.5rem; 
+            }
+            .days-summary-card { 
+                grid-template-columns: repeat(3, 1fr); 
+            }
+
             .modal-grid { grid-template-columns: 1fr; } 
-            /* Ajuste para mobile */
+            
+            .entries-section {
+                padding: 0; 
+            }
+            .entries-section .card {
+                padding: 1rem; 
+            }
+            .table-wrapper {
+                overflow-x: auto; 
+                -webkit-overflow-scrolling: touch;
+            }
+            .entries-table {
+                min-width: 550px; 
+            }
+            .entries-table th, .entries-table td {
+                padding: 0.75rem 0.5rem; 
+            }
+            
+        }
+
+        /* OTIMIZAÇÃO ESPECÍFICA PARA CELULAR (Max-width 420px) */
+        @media (max-width: 420px) {
+            .app-container { padding: 0.75rem; }
+            
+            /* Verticaliza o dashboard para caber na tela sem apertar */
+            .dashboard {
+                grid-template-columns: 1fr; /* Métrica 100% da largura */
+                gap: 0.75rem;
+            }
+            .metric-card {
+                grid-column: 1 / -1; /* Ocupa a largura total (1 coluna) */
+            }
+            /* Dias cumpridos ficam com 3 colunas, mas dentro do card de 100% */
+            .days-summary-card { 
+                grid-column: 1 / -1; 
+                padding: 0.75rem; 
+            }
+            .holiday-card {
+                grid-column: 1 / -1; 
+                padding: 0.75rem;
+            }
+            
+            /* Ajuste de densidade da tabela para telas muito pequenas */
+            .entries-table {
+                min-width: 450px; /* Reduz largura mínima, mas mantém a rolagem horizontal */
+            }
+            .entries-table th, .entries-table td {
+                padding: 0.5rem; /* Máxima compressão vertical e horizontal */
+                font-size: 0.75rem; /* Diminui a fonte da tabela */
+            }
+            
+            /* Ajuste do modal de punch */
+            #punch-modal .modal-content {
+                padding-top: 4rem;
+                min-height: 70vh;
+            }
             #punch-modal #punch-button {
-                width: 200px;
-                height: 200px;
+                width: 180px;
+                height: 180px;
+                font-size: 1.25rem;
             }
             #punch-modal #punch-next-action {
-                font-size: 2rem;
+                font-size: 1.8rem;
             }
         }
     </style>
@@ -238,15 +389,22 @@
                     </div>
                     <h2 style="font-weight: 500; font-size: 1.2rem; color: var(--text-secondary); margin-left: 52px; margin-top: -10px;" id="current-month-display"></h2>
                 </div>
+                <div class="main-actions-group">
+                    <button class="btn btn-inline btn-primary" id="open-punch-modal" title="Ponto Rápido"><i data-feather="power"></i> Ponto</button>
+                    <button class="btn btn-inline btn-primary" id="add-entry-btn" title="Novo Lançamento Manual"><i data-feather="plus-circle"></i> Manual</button>
+                </div>
+
                 <div class="header-actions">
-                    <button class="btn btn-inline btn-secondary" id="app-to-admin-btn" style="display: none;" title="Voltar ao Admin Painel"><i data-feather="shield"></i> Admin</button>
+                    <button class="btn btn-inline btn-secondary" id="app-to-admin-btn" style="display: none;" title="Painel Admin"><i data-feather="shield"></i> <span>Admin</span></button>
                     
-                    <button class="theme-switcher"></button>
+                    <button class="theme-switcher" title="Alternar Tema"></button>
                     <button class="btn btn-inline btn-secondary" id="open-settings-modal" title="Configurações"><i data-feather="settings"></i></button>
                     <button class="btn btn-inline btn-secondary" id="open-bonified-modal" title="Adicionar Horas Abonadas"><i data-feather="gift"></i></button>
-                    <button class="btn btn-inline btn-primary" id="open-punch-modal" title="Ponto Rápido"><i data-feather="power"></i></button>
-                    <button class="btn btn-inline btn-primary" id="add-entry-btn" title="Novo Lançamento"><i data-feather="plus-circle"></i></button>
-                    <button class="btn btn-inline btn-secondary" id="logout-btn" title="Sair"><i data-feather="log-out"></i></button>
+                    
+                    <button class="btn btn-inline btn-primary" id="open-punch-modal" style="display: none;"><i data-feather="power"></i> Ponto</button>
+                    <button class="btn btn-inline btn-primary" id="add-entry-btn" style="display: none;"><i data-feather="plus-circle"></i> Manual</button>
+                    
+                    <button class="btn btn-inline btn-secondary" id="logout-btn" title="Sair"><i data-feather="log-out"></i> <span>Sair</span></button>
                 </div>
             </header>
 
@@ -529,16 +687,18 @@
                     if (userData.role === 'admin') {
                         // SE FOR ADMIN: INICIALIZA AMBOS OS APPS
                         if (!window.adminInstance) initializeAdminApp(user);
-                        if (!window.appInstance) initializeEmployeeApp(user);
+                        if (!window.appInstance) initializeEmployeeApp(user, false); // Admin não abre o modal de ponto
                         
                         // Mostra o botão de "Voltar ao Admin" na tela do App
                         btnAppToAdmin.style.display = 'inline-flex';
                         
-                        // Mostra painel de admin por padrão
-                        showPage('admin-page');
+                        // Abre a página de Registros (Meus Registros) por padrão
+                        showPage('app-page');
+                        
                     } else {
                         // SE FOR FUNCIONÁRIO: INICIALIZA APENAS O APP
-                        if (!window.appInstance) initializeEmployeeApp(user, true); // Passa true para forçar abertura do modal
+                        // Passa true para abrir o modal de ponto automaticamente.
+                        if (!window.appInstance) initializeEmployeeApp(user, true); 
                         showPage('app-page');
                     }
                 }).catch(err => {
@@ -585,6 +745,7 @@
                 this.addEventListeners(); 
                 this.listenForData(() => {
                     // Após os dados serem carregados (e o punchState atualizado), verifica se deve abrir o modal
+                    // Alteração: Garante que só abra se a flag estiver true E a próxima ação não for 'Done' (dia concluído)
                     if (this.openPunchModalOnLoad && this.punchState.nextAction !== 'Done') {
                         this.openModal(this.dom.punchModal);
                         this.openPunchModalOnLoad = false; // Garante que só abra automaticamente uma vez por sessão
@@ -654,6 +815,7 @@
             }
             
             saveData() { 
+                // Garantir que a lógica de salvamento do estado do ponto rápido esteja aqui
                 if(this.userDocRef) {
                     // Salva o estado do ponto rápido junto com os dados do tracker
                     this.userDocRef.set({ 
@@ -672,11 +834,13 @@
                 if (savedState && savedState.entryDate === todayDate) {
                     this.punchState = savedState;
                     if (this.punchState.currentEntryId && !todayEntry) {
+                        // Entrada foi excluída manualmente? Reseta o estado.
                         this.punchState.nextAction = 'Start';
                         this.punchState.currentEntryId = null;
                         this.punchState.entryDate = null;
                     } else if (todayEntry) {
                         this.punchState.currentEntryId = todayEntry.id;
+                        // Força a reavaliação do nextAction com base nos dados do dia, caso o estado salvo esteja dessincronizado
                         if (!todayEntry.startTime) this.punchState.nextAction = 'Start';
                         else if (!todayEntry.lunchStartTime) this.punchState.nextAction = 'LunchStart';
                         else if (!todayEntry.lunchEndTime) this.punchState.nextAction = 'LunchEnd';
@@ -703,19 +867,19 @@
                 const entry = this.state.entries.find(e => e.id === this.punchState.currentEntryId) || {};
                 
                 const actionMap = {
-                    'Start': { button: 'REGISTRAR ENTRADA', action: 'Salvará a sua hora de início do trabalho. (0/4)', status: 'Entrada' },
-                    'LunchStart': { button: 'SAÍDA PARA ALMOÇO', action: `Salvará a sua hora de saída para o almoço (Entrada: ${entry.startTime || '??:??'}). (1/4)`, status: 'Saída Almoço' },
-                    'LunchEnd': { button: 'VOLTA DO ALMOÇO', action: `Salvará a sua hora de volta do almoço (Saída Almoço: ${entry.lunchStartTime || '??:??'}). (2/4)`, status: 'Volta Almoço' },
-                    'End': { button: 'SAÍDA GERAL', action: `Salvará a sua hora de saída final e encerrará o ponto de hoje (Volta Almoço: ${entry.lunchEndTime || '??:??'}). (3/4)`, status: 'Saída Geral' },
-                    'Done': { button: 'DIA CONCLUÍDO', action: 'Todos os pontos de hoje foram registrados. Você pode fechar este modal. (4/4)', status: 'Concluído' }
+                    'Start': { button: 'REGISTRAR ENTRADA', action: 'Salvará a sua hora de início do trabalho. (0/4)', status: 'Próximo Passo: Entrada' },
+                    'LunchStart': { button: 'SAÍDA PARA ALMOÇO', action: `Salvará a sua hora de saída para o almoço (Entrada: ${entry.startTime || '??:??'}). (1/4)`, status: 'Próximo Passo: Saída Almoço' },
+                    'LunchEnd': { button: 'VOLTA DO ALMOÇO', action: `Salvará a sua hora de volta do almoço (Saída Almoço: ${entry.lunchStartTime || '??:??'}). (2/4)`, status: 'Próximo Passo: Volta Almoço' },
+                    'End': { button: 'SAÍDA GERAL', action: `Salvará a sua hora de saída final e encerrará o ponto de hoje (Volta Almoço: ${entry.lunchEndTime || '??:??'}). (3/4)`, status: 'Próximo Passo: Saída Geral' },
+                    'Done': { button: 'DIA CONCLUÍDO', action: 'Todos os pontos de hoje foram registrados. Você pode fechar este modal. (4/4)', status: 'Ponto Concluído' }
                 };
 
                 const currentAction = actionMap[nextAction];
-                this.dom.punchNextActionEl.textContent = `Próximo Passo: ${currentAction.status}`;
+                this.dom.punchNextActionEl.textContent = currentAction.status;
                 this.dom.punchNextTimeInfo.textContent = currentAction.action;
                 this.dom.punchButton.textContent = currentAction.button;
-                this.dom.punchButton.disabled = currentAction.status === 'Concluído';
-                this.dom.punchButton.style.boxShadow = currentAction.status === 'Concluído' ? 'none' : '0 10px 30px rgba(0, 221, 198, 0.4)';
+                this.dom.punchButton.disabled = nextAction === 'Done';
+                this.dom.punchButton.style.boxShadow = nextAction === 'Done' ? 'none' : '0 10px 30px rgba(0, 221, 198, 0.4)';
                 hideAlert('punch-alert'); // Limpa alertas anteriores
             }
 
@@ -723,30 +887,27 @@
                 const now = new Date();
                 const nowTime = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', hour12: false }); // HH:MM
                 const todayDate = now.toISOString().split('T')[0];
+                const entryId = this.punchState.currentEntryId;
 
-                if (this.punchState.entryDate && this.punchState.entryDate !== todayDate) {
+                // Se o dia do estado salvo for diferente de hoje E não estiver em 'Done', é um problema de dia virado/aberto
+                if (this.punchState.entryDate && this.punchState.entryDate !== todayDate && this.punchState.nextAction !== 'Done') {
                     showAlert('punch-alert', 'Você precisa fechar o ponto do dia anterior manualmente, ou reinicie o aplicativo para um novo registro.', 'error');
                     return;
                 }
 
-                let entry = this.state.entries.find(e => e.id === this.punchState.currentEntryId);
+                let entry = this.state.entries.find(e => e.id === entryId);
 
                 try {
                     switch (this.punchState.nextAction) {
                         case 'Start':
-                            if (entry) {
-                                entry.startTime = nowTime;
-                                this.punchState.nextAction = 'LunchStart';
-                            } else {
-                                // Novo registro
-                                const newId = `entry_${Date.now()}`;
-                                const newEntry = { id: newId, date: todayDate, startTime: nowTime, lunchStartTime: '', lunchEndTime: '', endTime: '' };
-                                this.state.entries.push(newEntry);
-                                this.punchState.currentEntryId = newId;
-                                this.punchState.entryDate = todayDate;
-                                this.punchState.nextAction = 'LunchStart';
-                                entry = newEntry; // Atualiza a referência
-                            }
+                            // Novo registro
+                            const newId = `entry_${Date.now()}`;
+                            const newEntry = { id: newId, date: todayDate, startTime: nowTime, lunchStartTime: '', lunchEndTime: '', endTime: '' };
+                            this.state.entries.push(newEntry);
+                            this.punchState.currentEntryId = newId;
+                            this.punchState.entryDate = todayDate;
+                            this.punchState.nextAction = 'LunchStart';
+                            entry = newEntry; 
                             showAlert('punch-alert', `Entrada registrada às ${nowTime}.`, 'success');
                             break;
                         
@@ -840,7 +1001,14 @@
             }
             renderHolidays() { const today=new Date(); today.setHours(0,0,0,0); this.dom.holidayListEl.innerHTML=''; const allHolidays = Object.values(this.holidays).flat(); const upcoming=allHolidays.map(h=>({ ...h, dateObj: new Date(h.date+'T00:00:00')})).filter(h=>h.dateObj>=today).sort((a,b)=>a.dateObj-b.dateObj); if(upcoming.length===0){this.dom.holidayListEl.innerHTML=`<li><span>Nenhum feriado futuro.</span></li>`;return;} upcoming.forEach(h=>{this.dom.holidayListEl.innerHTML+=`<li><span>${h.name}</span> <span class="date">${h.dateObj.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'})}</span></li>`;}); }
             openModal(modal) { if(modal) modal.classList.add('visible'); }
-            closeModal(modal) { if(modal) modal.classList.remove('visible'); }
+            closeModal(modal) { 
+                if(modal) modal.classList.remove('visible'); 
+                if(modal.id === 'punch-modal') {
+                    // Se o modal de ponto for fechado e a ação ainda não for 'Done',
+                    // precisamos garantir que o estado do punch seja salvo no db.
+                    this.saveData(); 
+                }
+            }
             addEventListeners() {
                 document.querySelectorAll('.modal-overlay').forEach(m => m.addEventListener('click', e => { if(e.target === m || e.target.closest('.close-modal')) this.closeModal(m); }));
                 this.dom.addEntryBtn.addEventListener('click', () => { document.getElementById('entry-modal-title').textContent = 'Novo Período de Trabalho'; this.dom.addEntryForm.reset(); document.getElementById('entry-id').value = ''; this.openModal(this.dom.addEntryModal); });
@@ -933,8 +1101,38 @@
         }
         
         class AdminApp {
-            constructor(user) { this.user = user; this.users = []; this.unsubscribe = null; this.dom = { userList: document.getElementById('user-list'), userDetailsModal: document.getElementById('user-details-modal'), userDetailsTitle: document.getElementById('user-details-title'), userDetailsContent: document.getElementById('user-details-content'), }; }
-            init() { this.listenForUsers(); this.addEventListeners(); }
+            constructor(user) { 
+                this.user = user; 
+                this.users = []; 
+                this.unsubscribe = null; 
+                this.dom = { 
+                    userList: document.getElementById('user-list'), 
+                    userDetailsModal: document.getElementById('user-details-modal'), 
+                    userDetailsTitle: document.getElementById('user-details-title'), 
+                    userDetailsContent: document.getElementById('user-details-content'), 
+                }; 
+            }
+            
+            // CORREÇÃO: Função addEventListeners para o AdminApp
+            addEventListeners() {
+                 this.dom.userList.addEventListener('click', e => { 
+                    const item = e.target.closest('.user-list-item'); 
+                    if (item) { 
+                        const userId = item.dataset.userId; 
+                        const user = this.users.find(u => u.id === userId); 
+                        if (user) this.showUserDetails(user); 
+                    } 
+                }); 
+                this.dom.userDetailsModal.addEventListener('click', e => { 
+                    if (e.target === this.dom.userDetailsModal || e.target.closest('.close-modal')) 
+                        this.dom.userDetailsModal.classList.remove('visible'); 
+                }); 
+            }
+
+            init() { 
+                this.addEventListeners(); // Chamada da função corrigida
+                this.listenForUsers(); 
+            }
             cleanup() { if (this.unsubscribe) this.unsubscribe(); }
             
             // CORREÇÃO: Remove o filtro de 'employee' para listar todos (exceto o próprio admin logado)
