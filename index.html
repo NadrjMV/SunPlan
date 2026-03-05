@@ -909,8 +909,16 @@
                         <img src="images/SunPlan.png" alt="SunShield Logo">
                         <h1>SunShield Controle de Horas</h1>
                     </div>
-                    <h2 style="font-weight: 500; font-size: 1.2rem; color: var(--text-secondary); margin-left: 52px; margin-top: -10px;"
-                        id="current-month-display"></h2>
+                    <div style="display: flex; align-items: center; gap: 1rem; margin-left: 52px; margin-top: -10px;">
+                        <h2 style="font-weight: 500; font-size: 1.2rem; color: var(--text-secondary);"
+                            id="current-month-display"></h2>
+                        <div class="filter-group" style="display: flex; gap: 0.5rem;">
+                            <select id="filter-month" class="btn btn-secondary"
+                                style="padding: 0.2rem 0.5rem; font-size: 0.8rem; width: auto;"></select>
+                            <select id="filter-year" class="btn btn-secondary"
+                                style="padding: 0.2rem 0.5rem; font-size: 0.8rem; width: auto;"></select>
+                        </div>
+                    </div>
                 </div>
                 <div class="main-actions-group">
                     <button class="btn btn-inline btn-primary" id="open-punch-modal" title="Ponto Rápido"><i
@@ -1092,9 +1100,30 @@
                 <h2>Configurações</h2><i data-feather="x" class="close-modal"></i>
             </div>
             <form id="settings-form">
-                <div class="input-group"><label for="daily-workload">Carga Horária Diária (Ex: 8 para 8h, 6.5 para
+                <div class="input-group"><label for="daily-workload">Carga Horária Padrão (Ex: 8 para 8h, 6.5 para
                         6h30)</label><input type="number" id="daily-workload" step="0.1" min="1" required></div>
-                <button type="submit" class="btn btn-primary">Salvar Configurações</button>
+
+                <div style="margin-top: 1.5rem; border-top: 1px solid var(--border-color); padding-top: 1rem;">
+                    <h3>Histórico de Carga Horária</h3>
+                    <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 1rem;">Use para quando sua
+                        carga horária mudou ao longo do tempo (ex: estagiário 6h -> efetivado 8h).</p>
+
+                    <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem;">
+                        <input type="date" id="workload-history-date"
+                            style="flex: 2; padding: 0.5rem; border-radius: 8px; background: var(--bg-primary); border: 1px solid var(--border-color); color: var(--text-primary);">
+                        <input type="number" id="workload-history-hours" placeholder="Horas" step="0.1"
+                            style="flex: 1; padding: 0.5rem; border-radius: 8px; background: var(--bg-primary); border: 1px solid var(--border-color); color: var(--text-primary);">
+                        <button type="button" id="add-workload-history-btn" class="btn btn-inline btn-primary"
+                            style="padding: 0.5rem;"><i data-feather="plus"></i></button>
+                    </div>
+
+                    <ul id="workload-history-list"
+                        style="list-style: none; font-size: 0.9rem; max-height: 150px; overflow-y: auto;">
+                    </ul>
+                </div>
+
+                <button type="submit" class="btn btn-primary" style="margin-top: 1rem;">Salvar Todas as
+                    Configurações</button>
             </form>
         </div>
     </div>
@@ -1105,6 +1134,8 @@
                 <h2>Adicionar Horas Abonadas</h2><i data-feather="x" class="close-modal"></i>
             </div>
             <form id="bonified-form">
+                <div class="input-group"><label for="bonified-date-input">Data</label><input type="date"
+                        id="bonified-date-input" required></div>
                 <div class="input-group"><label for="bonified-hours-input">Horas a Adicionar (HH:MM)</label><input
                         type="time" id="bonified-hours-input" placeholder="00:00" required></div>
                 <div class="input-group"><label for="bonified-description">Descrição (Opcional)</label><input
@@ -1329,6 +1360,8 @@
                     // Estado do ponto rápido: qual é a próxima ação esperada (Start, LunchStart, LunchEnd, End)
                     this.punchState = { nextAction: 'Start', currentEntryId: null, entryDate: null };
                     this.liveUpdateInterval = null;
+                    const d = new Date();
+                    this.viewingDate = { month: d.getMonth(), year: d.getFullYear() };
                 }
 
                 // MODIFICAÇÃO: Chamar openPunchModal se for a primeira carga E não estiver 'Done'
@@ -1397,8 +1430,19 @@
                         punchNextTimeInfo: document.getElementById('punch-next-time-info'),
                         punchAlert: document.getElementById('punch-alert'),
 
+                        filterMonth: app.querySelector('#filter-month'),
+                        filterYear: app.querySelector('#filter-year'),
+                        bonifiedDateInput: document.getElementById('bonified-date-input'),
+
+                        // Settings Workload History
+                        workloadHistoryList: document.getElementById('workload-history-list'),
+                        addWorkloadHistoryBtn: document.getElementById('add-workload-history-btn'),
+                        workloadHistoryDate: document.getElementById('workload-history-date'),
+                        workloadHistoryHours: document.getElementById('workload-history-hours'),
+
                         dateInput: flatpickr(document.getElementById('date-input'), { dateFormat: "Y-m-d", locale: "pt" })
                     };
+                    this.populateFilters();
                 }
 
                 // MODIFICAÇÃO: Adicionar callback para saber quando a data foi carregada
@@ -1409,7 +1453,7 @@
                             const data = doc.data();
                             if (data.trackerData) {
                                 this.state = {
-                                    settings: data.trackerData.settings || { dailyWorkload: 8 },
+                                    settings: data.trackerData.settings || { dailyWorkload: 8, workloadHistory: [] },
                                     entries: data.trackerData.entries || [],
                                     bonuses: data.trackerData.bonuses || []
                                 };
@@ -1584,14 +1628,30 @@
                     return Math.max(0, total);
                 }
 
+                getWorkloadForDate(dateStr) {
+                    const history = this.state.settings.workloadHistory || [];
+                    const sortedHistory = [...history].sort((a, b) => new Date(b.date) - new Date(a.date));
+                    const match = sortedHistory.find(h => h.date <= dateStr);
+                    return match ? parseFloat(match.dailyWorkload) : parseFloat(this.state.settings.dailyWorkload || 8);
+                }
+
+                populateFilters() {
+                    const monthNames = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
+                    this.dom.filterMonth.innerHTML = monthNames.map((name, i) => `<option value="${i}" ${i === this.viewingDate.month ? 'selected' : ''}>${name}</option>`).join('');
+
+                    const currentYear = new Date().getFullYear();
+                    const years = [];
+                    for (let y = currentYear - 2; y <= currentYear + 1; y++) years.push(y);
+                    this.dom.filterYear.innerHTML = years.map(y => `<option value="${y}" ${y === this.viewingDate.year ? 'selected' : ''}>${y}</option>`).join('');
+                }
+
                 networkDays(start, end, year) { let c = 0; let cur = new Date(start.getTime()); const hS = new Set((this.holidays[year] || []).map(h => h.date)); while (cur <= end) { const d = cur.getDay(); const dS = cur.toISOString().split('T')[0]; if (d !== 0 && d !== 6 && !hS.has(dS)) c++; cur.setDate(cur.getDate() + 1); } return c; }
                 render() { this.renderTable(); this.renderDashboard(); this.renderHolidays(); this.renderPunchModal(); feather.replace(); }
 
                 renderTable() {
                     this.dom.entriesTbody.innerHTML = '';
-                    const today = new Date();
-                    const currentMonth = today.getMonth();
-                    const currentYear = today.getFullYear();
+                    const currentMonth = this.viewingDate.month;
+                    const currentYear = this.viewingDate.year;
                     const currentMonthEntries = this.state.entries.filter(e => {
                         const entryDate = new Date(e.date + 'T00:00:00');
                         return entryDate.getMonth() === currentMonth && entryDate.getFullYear() === currentYear;
@@ -1609,12 +1669,128 @@
                 }
 
                 renderDashboard() {
-                    const today = new Date(), cM = today.getMonth(), cY = today.getFullYear();
+                    const viewingMonth = this.viewingDate.month;
+                    const viewingYear = this.viewingDate.year;
 
                     const monthNames = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
-                    this.dom.currentMonthDisplay.textContent = `Mês de ${monthNames[cM]}`;
+                    this.dom.currentMonthDisplay.textContent = `Mês de ${monthNames[viewingMonth]}`;
 
-                    const pMD = new Date(cY, cM - 1, 1), pM = pMD.getMonth(), pMY = pMD.getFullYear(); let wMPM = 0; const wDPM = new Set(); this.state.entries.forEach(e => { const eD = new Date(e.date + 'T00:00:00'); if (eD.getMonth() === pM && eD.getFullYear() === pMY) { wMPM += TimeTrackerApp.calculateWorkedMinutes(e); wDPM.add(e.date); } }); const mSPrev = new Date(pMY, pM, 1), mEPrev = new Date(pMY, pM + 1, 0); const tWDIMPrev = this.networkDays(mSPrev, mEPrev, pMY.toString()); const eMPM = tWDIMPrev * (this.state.settings.dailyWorkload || 8) * 60; const bPM = this.state.bonuses.filter(b => { const bD = new Date(b.date); return bD.getMonth() === pM && bD.getFullYear() === pMY; }).reduce((a, b) => a + b.minutes, 0); const balPM = wMPM - eMPM + bPM; this.dom.prevMonthBalanceEl.textContent = TimeTrackerApp.formatMinutesToHHMM(balPM); let wMTM = 0; const wDTM = new Set(); this.state.entries.forEach(e => { const eD = new Date(e.date + 'T00:00:00'); if (eD.getMonth() === cM && eD.getFullYear() === cY) { wMTM += TimeTrackerApp.calculateWorkedMinutes(e); wDTM.add(e.date); } }); const dC = wDTM.size; const mS = new Date(cY, cM, 1), mE = new Date(cY, cM + 1, 0); const tWDIM = this.networkDays(mS, mE, cY.toString()); const eMTM = tWDIM * (this.state.settings.dailyWorkload || 8) * 60; const bTM = this.state.bonuses.filter(b => { const bD = new Date(b.date); return bD.getMonth() === cM && bD.getFullYear() === cY; }).reduce((a, b) => a + b.minutes, 0); const cMB = wMTM - (dC * (this.state.settings.dailyWorkload || 8) * 60) + bTM; const tB = balPM + cMB; this.dom.workedHoursEl.textContent = TimeTrackerApp.formatMinutesToHHMM(wMTM); this.dom.expectedHoursEl.textContent = TimeTrackerApp.formatMinutesToHHMM(eMTM); this.dom.bonifiedHoursDisplayEl.textContent = TimeTrackerApp.formatMinutesToHHMM(bTM); this.dom.currentMonthBalanceEl.textContent = TimeTrackerApp.formatMinutesToHHMM(cMB); this.dom.timeBalanceEl.textContent = TimeTrackerApp.formatMinutesToHHMM(tB); this.dom.timeBalanceEl.parentElement.className = tB >= 0 ? 'metric-card positive' : 'metric-card negative'; this.dom.daysCompletedEl.textContent = dC; this.dom.daysTotalEl.textContent = tWDIM; this.dom.daysRemainingEl.textContent = Math.max(0, tWDIM - dC);
+                    // --- CUMULATIVE CALCULATION ---
+                    // Find the date range of all data
+                    const allDates = [
+                        ...this.state.entries.map(e => e.date),
+                        ...this.state.bonuses.map(b => b.date)
+                    ].sort();
+
+                    if (allDates.length === 0) {
+                        this.dom.timeBalanceEl.textContent = "00:00";
+                        this.dom.workedHoursEl.textContent = "00:00";
+                        this.dom.expectedHoursEl.textContent = "00:00";
+                        this.dom.prevMonthBalanceEl.textContent = "00:00";
+                        return;
+                    }
+
+                    const firstDate = new Date(allDates[0] + 'T00:00:00');
+                    const lastViewingMonthDate = new Date(viewingYear, viewingMonth, 1);
+
+                    let totalCumulativeBalance = 0;
+                    let prevMonthBalance = 0;
+                    let workedThisMonth = 0;
+                    let expectedThisMonth = 0;
+                    let bonusesThisMonth = 0;
+                    let daysCompletedThisMonth = 0;
+                    let totalNetworkDaysThisMonth = 0;
+
+                    // Iterate month by month from first data point to current viewing month
+                    let currentCalcDate = new Date(firstDate.getFullYear(), firstDate.getMonth(), 1);
+                    while (currentCalcDate <= lastViewingMonthDate) {
+                        const cM = currentCalcDate.getMonth();
+                        const cY = currentCalcDate.getFullYear();
+                        const isViewingMonth = (cM === viewingMonth && cY === viewingYear);
+
+                        // Worked hours and days in this specific month
+                        let workedInMonth = 0;
+                        const daysWorkedInMonth = new Set();
+                        this.state.entries.forEach(e => {
+                            const eD = new Date(e.date + 'T00:00:00');
+                            if (eD.getMonth() === cM && eD.getFullYear() === cY) {
+                                workedInMonth += TimeTrackerApp.calculateWorkedMinutes(e);
+                                daysWorkedInMonth.add(e.date);
+                            }
+                        });
+
+                        // Network days in this specific month
+                        const mS = new Date(cY, cM, 1);
+                        const mE = new Date(cY, cM + 1, 0);
+                        const tWDIM = this.networkDays(mS, mE, cY.toString());
+
+                        // Expected hours using workload from that month (mid-month workload change handled by taking workload of first day of month for simplicity, or we could calculate day by day)
+                        // To be more precise, let's calculate day by day for expected hours
+                        let expectedInMonth = 0;
+                        let tempDate = new Date(mS);
+                        const hS = new Set((this.holidays[cY.toString()] || []).map(h => h.date));
+                        while (tempDate <= mE) {
+                            const d = tempDate.getDay();
+                            const dS = tempDate.toISOString().split('T')[0];
+                            if (d !== 0 && d !== 6 && !hS.has(dS)) {
+                                expectedInMonth += this.getWorkloadForDate(dS) * 60;
+                            }
+                            tempDate.setDate(tempDate.getDate() + 1);
+                        }
+
+                        // Bonuses in this specific month
+                        const bonusesInMonth = this.state.bonuses.filter(b => {
+                            const bD = new Date(b.date + 'T00:00:00');
+                            return bD.getMonth() === cM && bD.getFullYear() === cY;
+                        }).reduce((acc, b) => acc + b.minutes, 0);
+
+                        // Actual balance for this specific month
+                        // Monthly balance = worked - (days_worked * workload) + bonuses
+                        // Wait, user defines balance as worked - expected? 
+                        // Usually it's Worked - (DailyWorkload * DaysWorked) + Bonuses
+                        // The previous code used: wMTM - (dC * dailyWorkload * 60) + bTM
+                        // Let's stick to that but use dynamic workload
+
+                        let monthBalance = 0;
+                        if (daysWorkedInMonth.size > 0) {
+                            let expectedForDaysWorked = 0;
+                            daysWorkedInMonth.forEach(dateStr => {
+                                expectedForDaysWorked += this.getWorkloadForDate(dateStr) * 60;
+                            });
+                            monthBalance = workedInMonth - expectedForDaysWorked + bonusesInMonth;
+                        } else {
+                            // If no days worked, balance is just bonuses (if any)
+                            monthBalance = bonusesInMonth;
+                        }
+
+                        if (isViewingMonth) {
+                            workedThisMonth = workedInMonth;
+                            expectedThisMonth = expectedInMonth;
+                            bonusesThisMonth = bonusesInMonth;
+                            daysCompletedThisMonth = daysWorkedInMonth.size;
+                            totalNetworkDaysThisMonth = tWDIM;
+                            prevMonthBalance = totalCumulativeBalance;
+                        }
+
+                        totalCumulativeBalance += monthBalance;
+                        currentCalcDate.setMonth(currentCalcDate.getMonth() + 1);
+                    }
+
+                    const currentMonthBalance = totalCumulativeBalance - prevMonthBalance;
+
+                    this.dom.workedHoursEl.textContent = TimeTrackerApp.formatMinutesToHHMM(workedThisMonth);
+                    this.dom.expectedHoursEl.textContent = TimeTrackerApp.formatMinutesToHHMM(expectedThisMonth);
+                    this.dom.bonifiedHoursDisplayEl.textContent = TimeTrackerApp.formatMinutesToHHMM(bonusesThisMonth);
+                    this.dom.prevMonthBalanceEl.textContent = TimeTrackerApp.formatMinutesToHHMM(prevMonthBalance);
+                    this.dom.currentMonthBalanceEl.textContent = TimeTrackerApp.formatMinutesToHHMM(currentMonthBalance);
+                    this.dom.timeBalanceEl.textContent = TimeTrackerApp.formatMinutesToHHMM(totalCumulativeBalance);
+
+                    this.dom.timeBalanceEl.parentElement.className = totalCumulativeBalance >= 0 ? 'metric-card positive' : 'metric-card negative';
+                    this.dom.currentMonthBalanceEl.parentElement.className = currentMonthBalance >= 0 ? 'metric-card positive' : 'metric-card negative';
+
+                    this.dom.daysCompletedEl.textContent = daysCompletedThisMonth;
+                    this.dom.daysTotalEl.textContent = totalNetworkDaysThisMonth;
+                    this.dom.daysRemainingEl.textContent = Math.max(0, totalNetworkDaysThisMonth - daysCompletedThisMonth);
                 }
                 renderHolidays() { const today = new Date(); today.setHours(0, 0, 0, 0); this.dom.holidayListEl.innerHTML = ''; const allHolidays = Object.values(this.holidays).flat(); const upcoming = allHolidays.map(h => ({ ...h, dateObj: new Date(h.date + 'T00:00:00') })).filter(h => h.dateObj >= today).sort((a, b) => a.dateObj - b.dateObj); if (upcoming.length === 0) { this.dom.holidayListEl.innerHTML = `<li><span>Nenhum feriado futuro.</span></li>`; return; } upcoming.forEach(h => { this.dom.holidayListEl.innerHTML += `<li><span>${h.name}</span> <span class="date">${h.dateObj.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}</span></li>`; }); }
                 openModal(modal) { if (modal) modal.classList.add('visible'); }
@@ -1629,10 +1805,26 @@
                 addEventListeners() {
                     document.querySelectorAll('.modal-overlay').forEach(m => m.addEventListener('click', e => { if (e.target === m || e.target.closest('.close-modal')) this.closeModal(m); }));
                     this.dom.addEntryBtn.addEventListener('click', () => { document.getElementById('entry-modal-title').textContent = 'Novo Período de Trabalho'; this.dom.addEntryForm.reset(); document.getElementById('entry-id').value = ''; this.openModal(this.dom.addEntryModal); });
-                    this.dom.openSettingsModalBtn.addEventListener('click', () => { document.getElementById('daily-workload').value = this.state.settings.dailyWorkload; this.openModal(this.dom.settingsModal); });
-                    this.dom.openBonifiedModalBtn.addEventListener('click', () => { this.dom.bonifiedForm.reset(); this.openModal(this.dom.bonifiedModal); });
-                    this.dom.openPunchModalBtn.addEventListener('click', () => { this.renderPunchModal(); this.openModal(this.dom.punchModal); }); // Evento para reabrir o modal
+                    this.dom.openSettingsModalBtn.addEventListener('click', () => {
+                        document.getElementById('daily-workload').value = this.state.settings.dailyWorkload;
+                        this.renderWorkloadHistory();
+                        this.openModal(this.dom.settingsModal);
+                    });
+                    this.dom.openBonifiedModalBtn.addEventListener('click', () => {
+                        this.dom.bonifiedForm.reset();
+                        this.dom.bonifiedDateInput.value = new Date().toISOString().split('T')[0];
+                        this.openModal(this.dom.bonifiedModal);
+                    });
                     this.dom.punchButton.addEventListener('click', () => this.handlePunch()); // Evento para registrar o ponto rápido
+
+                    this.dom.filterMonth.addEventListener('change', (e) => {
+                        this.viewingDate.month = parseInt(e.target.value);
+                        this.render();
+                    });
+                    this.dom.filterYear.addEventListener('change', (e) => {
+                        this.viewingDate.year = parseInt(e.target.value);
+                        this.render();
+                    });
 
                     this.dom.addEntryForm.addEventListener('submit', e => {
                         e.preventDefault();
@@ -1656,8 +1848,50 @@
                     });
 
                     this.dom.settingsForm.addEventListener('submit', e => { e.preventDefault(); this.state.settings.dailyWorkload = parseFloat(document.getElementById('daily-workload').value); this.saveData(); this.closeModal(this.dom.settingsModal); });
-                    this.dom.bonifiedForm.addEventListener('submit', e => { e.preventDefault(); this.state.bonuses.push({ id: `bonus_${Date.now()}`, date: new Date().toISOString().split('T')[0], minutes: TimeTrackerApp.timeToMinutes(document.getElementById('bonified-hours-input').value), description: document.getElementById('bonified-description').value }); this.saveData(); this.closeModal(this.dom.bonifiedModal); e.target.reset(); });
+                    this.dom.bonifiedForm.addEventListener('submit', e => {
+                        e.preventDefault();
+                        this.state.bonuses.push({
+                            id: `bonus_${Date.now()}`,
+                            date: document.getElementById('bonified-date-input').value,
+                            minutes: TimeTrackerApp.timeToMinutes(document.getElementById('bonified-hours-input').value),
+                            description: document.getElementById('bonified-description').value
+                        });
+                        this.saveData();
+                        this.closeModal(this.dom.bonifiedModal);
+                        e.target.reset();
+                    });
                     this.dom.openPrevMonthModalBtn.addEventListener('click', (e) => { e.preventDefault(); this.showPrevMonthDetails(); });
+
+                    this.dom.addWorkloadHistoryBtn.addEventListener('click', () => {
+                        const date = this.dom.workloadHistoryDate.value;
+                        const hours = parseFloat(this.dom.workloadHistoryHours.value);
+                        if (!date || isNaN(hours)) return;
+
+                        if (!this.state.settings.workloadHistory) this.state.settings.workloadHistory = [];
+                        this.state.settings.workloadHistory.push({ date, dailyWorkload: hours });
+                        this.state.settings.workloadHistory.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+                        this.renderWorkloadHistory();
+                        this.dom.workloadHistoryDate.value = '';
+                        this.dom.workloadHistoryHours.value = '';
+                    });
+                }
+
+                renderWorkloadHistory() {
+                    const history = this.state.settings.workloadHistory || [];
+                    this.dom.workloadHistoryList.innerHTML = history.map((h, i) => `
+                        <li style="display: flex; justify-content: space-between; align-items: center; padding: 0.5rem; border-bottom: 1px solid var(--border-color);">
+                            <span>${new Date(h.date + 'T00:00:00').toLocaleDateString('pt-BR')} - <strong>${h.dailyWorkload}h</strong></span>
+                            <i data-feather="trash-2" style="cursor: pointer; width: 14px; height: 14px; color: var(--error-color);" onclick="window.appInstance.removeWorkloadHistory(${i})"></i>
+                        </li>
+                    `).join('');
+                    if (history.length === 0) this.dom.workloadHistoryList.innerHTML = '<li style="padding: 0.5rem; color: var(--text-secondary);">Nenhum histórico.</li>';
+                    feather.replace();
+                }
+
+                removeWorkloadHistory(index) {
+                    this.state.settings.workloadHistory.splice(index, 1);
+                    this.renderWorkloadHistory();
                 }
                 deleteEntry(id) {
                     this.state.entries = this.state.entries.filter(e => e.id !== id);
@@ -1728,6 +1962,8 @@
                         userDetailsTitle: document.getElementById('user-details-title'),
                         userDetailsContent: document.getElementById('user-details-content'),
                     };
+                    const d = new Date();
+                    this.viewingDate = { month: d.getMonth(), year: d.getFullYear() };
                 }
 
                 // CORREÇÃO: Função addEventListeners para o AdminApp
@@ -1779,17 +2015,36 @@
                 }
 
                 showUserDetails(user) {
-                    const userData = user.trackerData || { entries: [], settings: { dailyWorkload: 8 }, bonuses: [] };
+                    this.currentUserDetails = user;
+                    const userData = user.trackerData || { entries: [], settings: { dailyWorkload: 8, workloadHistory: [] }, bonuses: [] };
+                    const viewingMonth = this.viewingDate.month;
+                    const viewingYear = this.viewingDate.year;
+
+                    const monthNames = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
                     this.dom.userDetailsTitle.textContent = `Detalhes de ${user.name} - ${userData.settings.dailyWorkload || 'N/A'}h/dia`;
 
                     const dashboardHTML = `
+                    <div style="display: flex; gap: 1rem; margin-bottom: 1.5rem; justify-content: center; align-items: center;">
+                        <span>Filtrar Período:</span>
+                        <select id="admin-filter-month" class="btn btn-secondary" style="width: auto; padding: 0.2rem 0.5rem;">
+                            ${monthNames.map((name, i) => `<option value="${i}" ${i === viewingMonth ? 'selected' : ''}>${name}</option>`).join('')}
+                        </select>
+                        <select id="admin-filter-year" class="btn btn-secondary" style="width: auto; padding: 0.2rem 0.5rem;">
+                            ${[2024, 2025, 2026].map(y => `<option value="${y}" ${y === viewingYear ? 'selected' : ''}>${y}</option>`).join('')}
+                        </select>
+                    </div>
                     <main class="main-content">
                         <section class="entries-section card">
                             <div class="table-wrapper" style="max-height: 400px;">
                                 <table class="entries-table">
                                     <thead><tr><th>Data</th><th>Entrada</th><th>Saída</th><th>Duração</th></tr></thead>
-                                    <tbody>
-                                        ${userData.entries.sort((a, b) => new Date(b.date) - new Date(a.date) || a.startTime.localeCompare(b.startTime)).map(e => `
+                                    <tbody id="admin-entries-tbody">
+                                        ${userData.entries
+                            .filter(e => {
+                                const d = new Date(e.date + 'T00:00:00');
+                                return d.getMonth() === viewingMonth && d.getFullYear() === viewingYear;
+                            })
+                            .sort((a, b) => new Date(b.date) - new Date(a.date) || a.startTime.localeCompare(b.startTime)).map(e => `
                                             <tr>
                                                 <td>${new Date(e.date + 'T00:00:00').toLocaleDateString('pt-BR')}</td>
                                                 <td>${e.startTime || '--:--'}</td>
@@ -1806,8 +2061,18 @@
                 `;
                     this.dom.userDetailsContent.innerHTML = dashboardHTML;
 
+                    // Add listeners for filters in modal
+                    document.getElementById('admin-filter-month').addEventListener('change', (e) => {
+                        this.viewingDate.month = parseInt(e.target.value);
+                        this.showUserDetails(this.currentUserDetails);
+                    });
+                    document.getElementById('admin-filter-year').addEventListener('change', (e) => {
+                        this.viewingDate.year = parseInt(e.target.value);
+                        this.showUserDetails(this.currentUserDetails);
+                    });
+
                     const dashboardContainer = this.dom.userDetailsContent.querySelector('.dashboard');
-                    const metrics = this.calculateUserMetrics(userData);
+                    const metrics = this.calculateUserMetrics(userData, viewingMonth, viewingYear);
                     dashboardContainer.innerHTML = `
                     <div class="metric-card ${metrics.totalBalance >= 0 ? 'positive' : 'negative'}"><h3>Banco de Horas Total</h3><div class="value">${TimeTrackerApp.formatMinutesToHHMM(metrics.totalBalance)}</div></div>
                     <div class="metric-card"><h3>Horas Trabalhadas (Mês)</h3><div class="value">${TimeTrackerApp.formatMinutesToHHMM(metrics.workedMinutesThisMonth)}</div></div>
@@ -1821,26 +2086,83 @@
                     feather.replace();
                 }
 
-                calculateUserMetrics(userData) {
-                    const holidays = new TimeTrackerApp(null).holidays;
-                    const networkDays = (start, end, year) => { let c = 0; let cur = new Date(start.getTime()); const hS = new Set((holidays[year] || []).map(h => h.date)); while (cur <= end) { const d = cur.getDay(); const dS = cur.toISOString().split('T')[0]; if (d !== 0 && d !== 6 && !hS.has(dS)) c++; cur.setDate(cur.getDate() + 1); } return c; };
+                calculateUserMetrics(userData, viewingMonth, viewingYear) {
+                    const appHelper = new TimeTrackerApp(null);
+                    appHelper.state = { settings: userData.settings, entries: userData.entries, bonuses: userData.bonuses };
 
-                    const today = new Date(), cM = today.getMonth(), cY = today.getFullYear();
-                    const pMD = new Date(cY, cM - 1, 1), pM = pMD.getMonth(), pMY = pMD.getFullYear();
-                    let wMPM = 0; const wDPM = new Set();
-                    userData.entries.forEach(e => { const eD = new Date(e.date + 'T00:00:00'); if (eD.getMonth() === pM && eD.getFullYear() === pMY) { wMPM += TimeTrackerApp.calculateWorkedMinutes(e); wDPM.add(e.date); } });
-                    const mSPrev = new Date(pMY, pM, 1), mEPrev = new Date(pMY, pM + 1, 0); const tWDIMPrev = networkDays(mSPrev, mEPrev, pMY.toString()); const eMPM = tWDIMPrev * (userData.settings.dailyWorkload || 8) * 60;
-                    const bPM = (userData.bonuses || []).filter(b => { const bD = new Date(b.date); return bD.getMonth() === pM && bD.getFullYear() === pMY; }).reduce((a, b) => a + b.minutes, 0);
-                    const balancePreviousMonth = wMPM - eMPM + bPM;
+                    const allDates = [...userData.entries.map(e => e.date), ...(userData.bonuses || []).map(b => b.date)].sort();
+                    if (allDates.length === 0) return { balancePreviousMonth: 0, workedMinutesThisMonth: 0, expectedMinutesThisMonth: 0, bonificationsThisMonth: 0, currentMonthBalance: 0, totalBalance: 0 };
 
-                    let workedMinutesThisMonth = 0; const wDTM = new Set();
-                    userData.entries.forEach(e => { const eD = new Date(e.date + 'T00:00:00'); if (eD.getMonth() === cM && eD.getFullYear() === cY) { workedMinutesThisMonth += TimeTrackerApp.calculateWorkedMinutes(e); wDTM.add(e.date); } });
-                    const dC = wDTM.size; const mS = new Date(cY, cM, 1), mE = new Date(cY, cM + 1, 0); const tWDIM = networkDays(mS, mE, cY.toString()); const expectedMinutesThisMonth = tWDIM * (userData.settings.dailyWorkload || 8) * 60;
-                    const bonificationsThisMonth = (userData.bonuses || []).filter(b => { const bD = new Date(b.date); return bD.getMonth() === cM && bD.getFullYear() === cY; }).reduce((a, b) => a + b.minutes, 0);
-                    const currentMonthBalance = workedMinutesThisMonth - (dC * (userData.settings.dailyWorkload || 8) * 60) + bonificationsThisMonth;
-                    const totalBalance = balancePreviousMonth + currentMonthBalance;
+                    const firstDate = new Date(allDates[0] + 'T00:00:00');
+                    const lastViewingMonthDate = new Date(viewingYear, viewingMonth, 1);
 
-                    return { balancePreviousMonth, workedMinutesThisMonth, expectedMinutesThisMonth, bonificationsThisMonth, currentMonthBalance, totalBalance };
+                    let totalCumulativeBalance = 0;
+                    let prevMonthBalance = 0;
+                    let workedThisMonth = 0;
+                    let expectedThisMonth = 0;
+                    let bonusesThisMonth = 0;
+
+                    let currentCalcDate = new Date(firstDate.getFullYear(), firstDate.getMonth(), 1);
+                    while (currentCalcDate <= lastViewingMonthDate) {
+                        const cM = currentCalcDate.getMonth();
+                        const cY = currentCalcDate.getFullYear();
+                        const isViewingMonth = (cM === viewingMonth && cY === viewingYear);
+
+                        let workedInMonth = 0;
+                        const daysWorkedInMonth = new Set();
+                        userData.entries.forEach(e => {
+                            const eD = new Date(e.date + 'T00:00:00');
+                            if (eD.getMonth() === cM && eD.getFullYear() === cY) {
+                                workedInMonth += TimeTrackerApp.calculateWorkedMinutes(e);
+                                daysWorkedInMonth.add(e.date);
+                            }
+                        });
+
+                        const mS = new Date(cY, cM, 1);
+                        const mE = new Date(cY, cM + 1, 0);
+                        let expectedInMonth = 0;
+                        let tempDate = new Date(mS);
+                        const hS = new Set((appHelper.holidays[cY.toString()] || []).map(h => h.date));
+                        while (tempDate <= mE) {
+                            if (tempDate.getDay() !== 0 && tempDate.getDay() !== 6 && !hS.has(tempDate.toISOString().split('T')[0])) {
+                                expectedInMonth += appHelper.getWorkloadForDate(tempDate.toISOString().split('T')[0]) * 60;
+                            }
+                            tempDate.setDate(tempDate.getDate() + 1);
+                        }
+
+                        const bonusesInMonth = (userData.bonuses || []).filter(b => {
+                            const bD = new Date(b.date + 'T00:00:00');
+                            return bD.getMonth() === cM && bD.getFullYear() === cY;
+                        }).reduce((acc, b) => acc + b.minutes, 0);
+
+                        let monthBalance = 0;
+                        if (daysWorkedInMonth.size > 0) {
+                            let expectedForDaysWorked = 0;
+                            daysWorkedInMonth.forEach(dateStr => { expectedForDaysWorked += appHelper.getWorkloadForDate(dateStr) * 60; });
+                            monthBalance = workedInMonth - expectedForDaysWorked + bonusesInMonth;
+                        } else {
+                            monthBalance = bonusesInMonth;
+                        }
+
+                        if (isViewingMonth) {
+                            workedThisMonth = workedInMonth;
+                            expectedThisMonth = expectedInMonth;
+                            bonusesThisMonth = bonusesInMonth;
+                            prevMonthBalance = totalCumulativeBalance;
+                        }
+
+                        totalCumulativeBalance += monthBalance;
+                        currentCalcDate.setMonth(currentCalcDate.getMonth() + 1);
+                    }
+
+                    return {
+                        balancePreviousMonth: prevMonthBalance,
+                        workedMinutesThisMonth: workedThisMonth,
+                        expectedMinutesThisMonth: expectedThisMonth,
+                        bonificationsThisMonth: bonusesThisMonth,
+                        currentMonthBalance: totalCumulativeBalance - prevMonthBalance,
+                        totalBalance: totalCumulativeBalance
+                    };
                 }
             }
 
