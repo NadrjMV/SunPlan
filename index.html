@@ -937,11 +937,6 @@
                     <button class="btn btn-inline btn-secondary" id="open-bonified-modal"
                         title="Adicionar Horas Abonadas"><i data-feather="gift"></i></button>
 
-                    <button class="btn btn-inline btn-primary" id="open-punch-modal" style="display: none;"><i
-                            data-feather="power"></i> Ponto</button>
-                    <button class="btn btn-inline btn-primary" id="add-entry-btn" style="display: none;"><i
-                            data-feather="plus-circle"></i> Manual</button>
-
                     <button class="btn btn-inline btn-secondary" id="logout-btn" title="Sair"><i
                             data-feather="log-out"></i> <span>Sair</span></button>
                 </div>
@@ -994,6 +989,11 @@
                         <i class="icon" data-feather="gift"></i>
                         <h3>Horas Abonadas (Mês)</h3>
                         <div class="value" id="bonified-hours-display">00:00</div>
+                        <button id="open-bonified-details-modal" class="btn btn-secondary"
+                            style="width: auto; padding: 0.4rem 0.8rem; font-size: 0.75rem; margin-top: 0.75rem;">
+                            <i data-feather="list" style="width: 14px; height: 14px;"></i>
+                            <span>Ver Detalhes</span>
+                        </button>
                     </div>
                     <div class="metric-card positive">
                         <i class="icon" data-feather="trending-down"></i>
@@ -1087,7 +1087,7 @@
                     <div class="input-group"><label for="lunch-end-input">Volta Almoço</label><input type="time"
                             id="lunch-end-input"></div>
                     <div class="input-group"><label for="end-time-input">Saída Geral</label><input type="time"
-                            id="end-time-input" required></div>
+                            id="end-time-input"></div>
                 </div>
                 <button type="submit" class="btn btn-primary">Salvar</button>
             </form>
@@ -1122,6 +1122,45 @@
                     </ul>
                 </div>
 
+                <div style="margin-top: 1.5rem; border-top: 1px solid var(--border-color); padding-top: 1rem;">
+                    <h3>Meses Ignorados</h3>
+                    <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 1rem;">Marque os meses que
+                        NÃO devem contar para o cálculo do Banco de Horas Total (ex: meses de desenvolvimento).</p>
+
+                    <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem;">
+                        <div style="flex: 2; display: flex; gap: 0.25rem;">
+                            <select id="ignored-month-select"
+                                style="flex: 1; padding: 0.5rem; border-radius: 8px; background: var(--bg-primary); border: 1px solid var(--border-color); color: var(--text-primary);">
+                                <option value="0">Janeiro</option>
+                                <option value="1">Fevereiro</option>
+                                <option value="2">Março</option>
+                                <option value="3">Abril</option>
+                                <option value="4">Maio</option>
+                                <option value="5">Junho</option>
+                                <option value="6">Julho</option>
+                                <option value="7">Agosto</option>
+                                <option value="8">Setembro</option>
+                                <option value="9">Outubro</option>
+                                <option value="10">Novembro</option>
+                                <option value="11">Dezembro</option>
+                            </select>
+                            <select id="ignored-year-select"
+                                style="flex: 1; padding: 0.5rem; border-radius: 8px; background: var(--bg-primary); border: 1px solid var(--border-color); color: var(--text-primary);">
+                                <option value="2025">2025</option>
+                                <option value="2026">2026</option>
+                                <option value="2027">2027</option>
+                            </select>
+                        </div>
+                        <button type="button" id="add-ignored-month-btn" class="btn btn-inline btn-primary"
+                            style="padding: 0.5rem; width: 42px;"><i data-feather="plus"></i></button>
+                    </div>
+
+                    <ul id="ignored-months-list"
+                        style="list-style: none; font-size: 0.9rem; max-height: 120px; overflow-y: auto;">
+                    </ul>
+                </div>
+
+
                 <button type="submit" class="btn btn-primary" style="margin-top: 1rem;">Salvar Todas as
                     Configurações</button>
             </form>
@@ -1151,6 +1190,28 @@
                 <h2 id="user-details-title">Detalhes do Funcionário</h2><i data-feather="x" class="close-modal"></i>
             </div>
             <div id="user-details-content"></div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="bonified-details-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="bonified-details-modal-title">Horas Abonadas do Mês</h2><i data-feather="x"
+                    class="close-modal"></i>
+            </div>
+            <div class="table-wrapper" style="max-height: 400px;">
+                <table class="entries-table">
+                    <thead>
+                        <tr>
+                            <th>Data</th>
+                            <th>Descrição</th>
+                            <th>Extra</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="bonified-details-tbody"></tbody>
+                </table>
+            </div>
         </div>
     </div>
 
@@ -1290,65 +1351,12 @@
                     .catch(err => showAlert('forgot-alert', `Erro: ${err.message}`));
             });
 
-            const logout = () => {
-                if (window.appInstance) { window.appInstance.cleanup(); window.appInstance = null; }
-                if (window.adminInstance) { window.adminInstance.cleanup(); window.adminInstance = null; }
-                auth.signOut();
-            };
-            document.getElementById('logout-btn').addEventListener('click', logout);
-            document.getElementById('admin-logout-btn').addEventListener('click', logout);
-
-            auth.onAuthStateChanged(user => {
-                // Esconde o botão de voltar ao admin por padrão ao mudar estado de auth
-                btnAppToAdmin.style.display = 'none';
-
-                if (user) {
-                    db.collection('users').doc(user.uid).get().then(doc => {
-                        const userData = doc.exists ? doc.data() : {};
-
-                        if (userData.role === 'admin') {
-                            // SE FOR ADMIN: INICIALIZA AMBOS OS APPS
-                            if (!window.adminInstance) initializeAdminApp(user);
-                            if (!window.appInstance) initializeEmployeeApp(user, false); // Admin não abre o modal de ponto
-
-                            // Mostra o botão de "Voltar ao Admin" na tela do App
-                            btnAppToAdmin.style.display = 'inline-flex';
-
-                            // Abre a página de Registros (Meus Registros) por padrão
-                            showPage('app-page');
-
-                        } else {
-                            // SE FOR FUNCIONÁRIO: INICIALIZA APENAS O APP
-                            // Passa true para abrir o modal de ponto automaticamente.
-                            if (!window.appInstance) initializeEmployeeApp(user, true);
-                            showPage('app-page');
-                        }
-                    }).catch(err => {
-                        console.error("Erro ao buscar role, assumindo funcionário:", err);
-                        if (!window.appInstance) initializeEmployeeApp(user, true);
-                        showPage('app-page');
-                    });
-                } else {
-                    showPage('login-page');
-                    if (window.appInstance) { window.appInstance.cleanup(); window.appInstance = null; }
-                    if (window.adminInstance) { window.adminInstance.cleanup(); window.adminInstance = null; }
-                }
-            });
-
-            function initializeEmployeeApp(user, openPunchModal = false) {
-                window.appInstance = new TimeTrackerApp(user, openPunchModal);
-                window.appInstance.init();
-            }
-
-            function initializeAdminApp(user) {
-                window.adminInstance = new AdminApp(user);
-                window.adminInstance.init();
-            }
+            // O código de inicialização foi movido para o final do script para garantir que as classes já existam.
 
             class TimeTrackerApp {
                 constructor(user, openPunchModal) {
                     this.user = user;
-                    this.state = { entries: [], settings: { dailyWorkload: 8 }, bonuses: [] };
+                    this.state = { entries: [], settings: { dailyWorkload: 8, workloadHistory: [], ignoredMonths: [] }, bonuses: [] };
                     this.unsubscribe = null;
                     this.userDocRef = user ? db.collection('users').doc(user.uid) : null;
                     this.dom = {};
@@ -1385,7 +1393,7 @@
                     if (this.liveUpdateInterval) clearInterval(this.liveUpdateInterval);
                     this.liveUpdateInterval = setInterval(() => {
                         // Só atualiza se houver um turno aberto para hoje
-                        if (this.punchState.nextAction !== 'Start' && this.punchState.nextAction !== 'Done') {
+                        if (this.punchState && this.punchState.nextAction !== 'Start' && this.punchState.nextAction !== 'Done') {
                             this.render();
                         }
                     }, 60000); // A cada 60 segundos
@@ -1398,27 +1406,28 @@
 
                 selectDOMElements() {
                     const app = document.getElementById('app-page');
+                    if (!app) return; // For safety when called from AdminApp
                     this.dom = {
-                        entriesTbody: app.querySelector('#entries-tbody'),
+                        entriesTbody: document.getElementById('entries-tbody'),
                         addEntryModal: document.getElementById('add-entry-modal'),
                         addEntryForm: document.getElementById('add-entry-form'),
                         settingsModal: document.getElementById('settings-modal'),
-                        openSettingsModalBtn: app.querySelector('#open-settings-modal'),
+                        openSettingsModalBtn: document.getElementById('open-settings-modal'),
                         settingsForm: document.getElementById('settings-form'),
                         bonifiedModal: document.getElementById('bonified-modal'),
-                        openBonifiedModalBtn: app.querySelector('#open-bonified-modal'),
+                        openBonifiedModalBtn: document.getElementById('open-bonified-modal'),
                         bonifiedForm: document.getElementById('bonified-form'),
-                        timeBalanceEl: app.querySelector('#time-balance'),
-                        workedHoursEl: app.querySelector('#worked-hours'),
-                        expectedHoursEl: app.querySelector('#expected-hours'),
-                        prevMonthBalanceEl: app.querySelector('#prev-month-balance'),
-                        bonifiedHoursDisplayEl: app.querySelector('#bonified-hours-display'),
-                        currentMonthBalanceEl: app.querySelector('#current-month-balance'),
-                        daysCompletedEl: app.querySelector('#days-completed'),
-                        daysTotalEl: app.querySelector('#days-total'),
-                        daysRemainingEl: app.querySelector('#days-remaining'),
-                        holidayListEl: app.querySelector('#holiday-list'),
-                        addEntryBtn: app.querySelector('#add-entry-btn'),
+                        timeBalanceEl: document.getElementById('time-balance'),
+                        workedHoursEl: document.getElementById('worked-hours'),
+                        expectedHoursEl: document.getElementById('expected-hours'),
+                        prevMonthBalanceEl: document.getElementById('prev-month-balance'),
+                        bonifiedHoursDisplayEl: document.getElementById('bonified-hours-display'),
+                        currentMonthBalanceEl: document.getElementById('current-month-balance'),
+                        daysCompletedEl: document.getElementById('days-completed'),
+                        daysTotalEl: document.getElementById('days-total'),
+                        daysRemainingEl: document.getElementById('days-remaining'),
+                        holidayListEl: document.getElementById('holiday-list'),
+                        addEntryBtn: document.getElementById('add-entry-btn'),
                         currentMonthDisplay: document.getElementById('current-month-display'),
                         prevMonthModal: document.getElementById('prev-month-modal'),
                         openPrevMonthModalBtn: document.getElementById('open-prev-month-modal'),
@@ -1430,8 +1439,12 @@
                         punchNextTimeInfo: document.getElementById('punch-next-time-info'),
                         punchAlert: document.getElementById('punch-alert'),
 
-                        filterMonth: app.querySelector('#filter-month'),
-                        filterYear: app.querySelector('#filter-year'),
+                        bonifiedDetailsModal: document.getElementById('bonified-details-modal'),
+                        bonifiedDetailsTbody: document.getElementById('bonified-details-tbody'),
+                        openBonifiedDetailsBtn: document.getElementById('open-bonified-details-modal'),
+
+                        filterMonth: document.getElementById('filter-month'),
+                        filterYear: document.getElementById('filter-year'),
                         bonifiedDateInput: document.getElementById('bonified-date-input'),
 
                         // Settings Workload History
@@ -1440,9 +1453,14 @@
                         workloadHistoryDate: document.getElementById('workload-history-date'),
                         workloadHistoryHours: document.getElementById('workload-history-hours'),
 
-                        dateInput: flatpickr(document.getElementById('date-input'), { dateFormat: "Y-m-d", locale: "pt" })
+                        ignoredMonthsList: document.getElementById('ignored-months-list'),
+                        ignoredMonthSelect: document.getElementById('ignored-month-select'),
+                        ignoredYearSelect: document.getElementById('ignored-year-select'),
+                        addIgnoredMonthBtn: document.getElementById('add-ignored-month-btn'),
+
+                        dateInput: document.getElementById('date-input') ? flatpickr(document.getElementById('date-input'), { dateFormat: "Y-m-d", locale: "pt" }) : null
                     };
-                    this.populateFilters();
+                    if (this.dom.filterMonth) this.populateFilters();
                 }
 
                 // MODIFICAÇÃO: Adicionar callback para saber quando a data foi carregada
@@ -1453,7 +1471,11 @@
                             const data = doc.data();
                             if (data.trackerData) {
                                 this.state = {
-                                    settings: data.trackerData.settings || { dailyWorkload: 8, workloadHistory: [] },
+                                    settings: {
+                                        dailyWorkload: (data.trackerData.settings || {}).dailyWorkload || 8,
+                                        workloadHistory: (data.trackerData.settings || {}).workloadHistory || [],
+                                        ignoredMonths: (data.trackerData.settings || {}).ignoredMonths || []
+                                    },
                                     entries: data.trackerData.entries || [],
                                     bonuses: data.trackerData.bonuses || []
                                 };
@@ -1481,38 +1503,44 @@
                 // FUNÇÕES DE PONTO RÁPIDO
                 updatePunchState(savedState) {
                     const now = new Date();
-                    const todayDate = now.toISOString().split('T')[0];
-                    let todayEntry = this.state.entries.find(e => e.date === todayDate);
+                    const todayDate = now.toLocaleDateString('sv').split(' ')[0];
+                    // Pick the last entry created for today, or the first one that is incomplete
+                    let todayEntries = (this.state.entries || []).filter(e => e.date === todayDate);
+                    let todayEntry = todayEntries.find(e => !e.endTime) || todayEntries[todayEntries.length - 1];
 
                     if (savedState && savedState.entryDate === todayDate) {
                         this.punchState = savedState;
-                        if (this.punchState.currentEntryId && !todayEntry) {
-                            // Entrada foi excluída manualmente? Reseta o estado.
-                            this.punchState.nextAction = 'Start';
-                            this.punchState.currentEntryId = null;
-                            this.punchState.entryDate = null;
+                        // If the tracked entry was deleted, try to find another incomplete one for today
+                        if (this.punchState.currentEntryId && !this.state.entries.find(e => e.id === this.punchState.currentEntryId)) {
+                            if (todayEntry) {
+                                this.punchState.currentEntryId = todayEntry.id;
+                                this.syncPunchActionWithEntry(todayEntry);
+                            } else {
+                                this.punchState = { nextAction: 'Start', currentEntryId: null, entryDate: null };
+                            }
                         } else if (todayEntry) {
-                            this.punchState.currentEntryId = todayEntry.id;
-                            // Força a reavaliação do nextAction com base nos dados do dia, caso o estado salvo esteja dessincronizado
-                            if (!todayEntry.startTime) this.punchState.nextAction = 'Start';
-                            else if (!todayEntry.lunchStartTime) this.punchState.nextAction = 'LunchStart';
-                            else if (!todayEntry.lunchEndTime) this.punchState.nextAction = 'LunchEnd';
-                            else if (!todayEntry.endTime) this.punchState.nextAction = 'End';
-                            else this.punchState.nextAction = 'Done';
+                            this.syncPunchActionWithEntry(todayEntry);
                         }
                     } else if (todayEntry) {
                         this.punchState.currentEntryId = todayEntry.id;
                         this.punchState.entryDate = todayDate;
-                        if (!todayEntry.startTime) this.punchState.nextAction = 'Start';
-                        else if (!todayEntry.lunchStartTime) this.punchState.nextAction = 'LunchStart';
-                        else if (!todayEntry.lunchEndTime) this.punchState.nextAction = 'LunchEnd';
-                        else if (!todayEntry.endTime) this.punchState.nextAction = 'End';
-                        else this.punchState.nextAction = 'Done';
+                        this.syncPunchActionWithEntry(todayEntry);
                     } else {
                         this.punchState = { nextAction: 'Start', currentEntryId: null, entryDate: null };
                     }
 
                     this.renderPunchModal();
+                }
+
+                syncPunchActionWithEntry(todayEntry) {
+                    if (!todayEntry.startTime) this.punchState.nextAction = 'Start';
+                    else if (!todayEntry.lunchStartTime) this.punchState.nextAction = 'LunchStart';
+                    else if (!todayEntry.lunchEndTime) this.punchState.nextAction = 'LunchEnd';
+                    else if (!todayEntry.endTime) this.punchState.nextAction = 'End';
+                    else this.punchState.nextAction = 'Done';
+
+                    // Allow starting a NEW entry if the current one is done but user wants more periods
+                    // (Manual entries will be separate, quick punch handles the main one)
                 }
 
                 renderPunchModal() {
@@ -1539,7 +1567,7 @@
                 async handlePunch() {
                     const now = new Date();
                     const nowTime = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', hour12: false }); // HH:MM
-                    const todayDate = now.toISOString().split('T')[0];
+                    const todayDate = now.toLocaleDateString('sv').split(' ')[0];
                     const entryId = this.punchState.currentEntryId;
 
                     // Se o dia do estado salvo for diferente de hoje E não estiver em 'Done', é um problema de dia virado/aberto
@@ -1613,13 +1641,14 @@
                 static calculateWorkedMinutes(e) {
                     if (!e.startTime) return 0;
 
-                    const endTime = e.endTime || (e.date === new Date().toISOString().split('T')[0] ? new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', hour12: false }) : '');
+                    const todayStr = new Date().toLocaleDateString('sv').split(' ')[0];
+                    const endTime = e.endTime || (e.date === todayStr ? new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', hour12: false }) : '');
                     if (!endTime) return 0;
 
                     let total = TimeTrackerApp.timeToMinutes(endTime) - TimeTrackerApp.timeToMinutes(e.startTime);
 
                     if (e.lunchStartTime) {
-                        const lunchEnd = e.lunchEndTime || (e.date === new Date().toISOString().split('T')[0] && e.lunchStartTime ? new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', hour12: false }) : '');
+                        const lunchEnd = e.lunchEndTime || (e.date === todayStr && e.lunchStartTime ? new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', hour12: false }) : '');
                         if (lunchEnd) {
                             const lunch = TimeTrackerApp.timeToMinutes(lunchEnd) - TimeTrackerApp.timeToMinutes(e.lunchStartTime);
                             total = total - lunch;
@@ -1645,7 +1674,20 @@
                     this.dom.filterYear.innerHTML = years.map(y => `<option value="${y}" ${y === this.viewingDate.year ? 'selected' : ''}>${y}</option>`).join('');
                 }
 
-                networkDays(start, end, year) { let c = 0; let cur = new Date(start.getTime()); const hS = new Set((this.holidays[year] || []).map(h => h.date)); while (cur <= end) { const d = cur.getDay(); const dS = cur.toISOString().split('T')[0]; if (d !== 0 && d !== 6 && !hS.has(dS)) c++; cur.setDate(cur.getDate() + 1); } return c; }
+                networkDays(start, end, year) {
+                    let c = 0;
+                    let cur = new Date(start.getTime());
+                    cur.setHours(0, 0, 0, 0);
+                    const hS = new Set((this.holidays[year] || []).map(h => h.date));
+                    while (cur <= end) {
+                        const d = cur.getDay();
+                        // Get local YYYY-MM-DD
+                        const dS = cur.getFullYear() + '-' + String(cur.getMonth() + 1).padStart(2, '0') + '-' + String(cur.getDate()).padStart(2, '0');
+                        if (d !== 0 && d !== 6 && !hS.has(dS)) c++;
+                        cur.setDate(cur.getDate() + 1);
+                    }
+                    return c;
+                }
                 render() { this.renderTable(); this.renderDashboard(); this.renderHolidays(); this.renderPunchModal(); feather.replace(); }
 
                 renderTable() {
@@ -1669,87 +1711,109 @@
                 }
 
                 renderDashboard() {
+                    if (!this.dom.timeBalanceEl) return;
                     const viewingMonth = this.viewingDate.month;
                     const viewingYear = this.viewingDate.year;
+
+                    const metrics = this.calculateMetricsForPeriod(this.state, viewingMonth, viewingYear);
 
                     const monthNames = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
                     this.dom.currentMonthDisplay.textContent = `Mês de ${monthNames[viewingMonth]}`;
 
-                    // --- CUMULATIVE CALCULATION ---
-                    // Find the date range of all data
-                    const allDates = [
-                        ...this.state.entries.map(e => e.date),
-                        ...this.state.bonuses.map(b => b.date)
-                    ].sort();
+                    this.dom.workedHoursEl.textContent = TimeTrackerApp.formatMinutesToHHMM(metrics.workedMinutesThisMonth);
+                    this.dom.expectedHoursEl.textContent = TimeTrackerApp.formatMinutesToHHMM(metrics.expectedMinutesThisMonth);
+                    this.dom.bonifiedHoursDisplayEl.textContent = TimeTrackerApp.formatMinutesToHHMM(metrics.bonificationsThisMonth);
+                    this.dom.prevMonthBalanceEl.textContent = TimeTrackerApp.formatMinutesToHHMM(metrics.balancePreviousMonth);
+                    this.dom.currentMonthBalanceEl.textContent = TimeTrackerApp.formatMinutesToHHMM(metrics.currentMonthBalance);
+                    this.dom.timeBalanceEl.textContent = TimeTrackerApp.formatMinutesToHHMM(metrics.totalBalance);
 
-                    if (allDates.length === 0) {
-                        this.dom.timeBalanceEl.textContent = "00:00";
-                        this.dom.workedHoursEl.textContent = "00:00";
-                        this.dom.expectedHoursEl.textContent = "00:00";
-                        this.dom.prevMonthBalanceEl.textContent = "00:00";
-                        return;
+                    this.dom.timeBalanceEl.parentElement.className = metrics.totalBalance >= 0 ? 'metric-card positive' : 'metric-card negative';
+                    this.dom.currentMonthBalanceEl.parentElement.className = metrics.currentMonthBalance >= 0 ? 'metric-card positive' : 'metric-card negative';
+
+                    this.dom.daysCompletedEl.textContent = metrics.daysCompletedInMonth;
+                    this.dom.daysTotalEl.textContent = metrics.totalNetworkDaysInMonth;
+                    this.dom.daysRemainingEl.textContent = Math.max(0, metrics.totalNetworkDaysInMonth - metrics.daysCompletedInMonth);
+                }
+
+                calculateMetricsForPeriod(state, viewingMonth, viewingYear) {
+                    const entries = state.entries || [];
+                    const bonuses = state.bonuses || [];
+                    const settings = state.settings || {};
+                    const ignoredMonths = settings.ignoredMonths || [];
+
+                    const allDatesArr = [
+                        ...entries.map(e => e.date),
+                        ...bonuses.map(b => b.date)
+                    ].filter(d => d).sort();
+
+                    const today = new Date();
+                    const currentRealMonth = today.getMonth();
+                    const currentRealYear = today.getFullYear();
+
+                    const viewingStart = new Date(viewingYear, viewingMonth, 1);
+
+                    let calculationStart;
+                    if (allDatesArr.length > 0) {
+                        const firstDataDate = new Date(allDatesArr[0] + 'T00:00:00');
+                        calculationStart = new Date(Math.min(firstDataDate.getTime(), viewingStart.getTime()));
+                    } else {
+                        calculationStart = new Date(viewingStart.getTime());
                     }
-
-                    const firstDate = new Date(allDates[0] + 'T00:00:00');
-                    const lastViewingMonthDate = new Date(viewingYear, viewingMonth, 1);
+                    calculationStart.setDate(1);
 
                     let totalCumulativeBalance = 0;
                     let prevMonthBalance = 0;
-                    let workedThisMonth = 0;
-                    let expectedThisMonth = 0;
-                    let bonusesThisMonth = 0;
-                    let daysCompletedThisMonth = 0;
-                    let totalNetworkDaysThisMonth = 0;
+                    let workedInViewingMonth = 0;
+                    let expectedInViewingMonth = 0;
+                    let bonusesInViewingMonth = 0;
+                    let daysWorkedInViewingMonth = 0;
+                    let networkDaysInViewingMonth = 0;
 
-                    // Iterate month by month from first data point to current viewing month
-                    let currentCalcDate = new Date(firstDate.getFullYear(), firstDate.getMonth(), 1);
-                    while (currentCalcDate <= lastViewingMonthDate) {
+                    let currentCalcDate = new Date(calculationStart.getFullYear(), calculationStart.getMonth(), 1);
+
+                    // Calculamos até o maior valor entre o mês sendo visto e o mês atual real (para garantir o Total absoluto)
+                    const lastDateToCalc = new Date(Math.max(
+                        new Date(viewingYear, viewingMonth, 1).getTime(),
+                        new Date(currentRealYear, currentRealMonth, 1).getTime()
+                    ));
+
+                    while (currentCalcDate <= lastDateToCalc) {
                         const cM = currentCalcDate.getMonth();
                         const cY = currentCalcDate.getFullYear();
                         const isViewingMonth = (cM === viewingMonth && cY === viewingYear);
+                        const isIgnored = ignoredMonths.some(im => im.month === cM && im.year === cY);
 
-                        // Worked hours and days in this specific month
                         let workedInMonth = 0;
                         const daysWorkedInMonth = new Set();
-                        this.state.entries.forEach(e => {
+                        entries.forEach(e => {
+                            if (!e.date) return;
                             const eD = new Date(e.date + 'T00:00:00');
-                            if (eD.getMonth() === cM && eD.getFullYear() === cY) {
+                            if (!isNaN(eD.getTime()) && eD.getMonth() === cM && eD.getFullYear() === cY) {
                                 workedInMonth += TimeTrackerApp.calculateWorkedMinutes(e);
                                 daysWorkedInMonth.add(e.date);
                             }
                         });
 
-                        // Network days in this specific month
                         const mS = new Date(cY, cM, 1);
                         const mE = new Date(cY, cM + 1, 0);
                         const tWDIM = this.networkDays(mS, mE, cY.toString());
 
-                        // Expected hours using workload from that month (mid-month workload change handled by taking workload of first day of month for simplicity, or we could calculate day by day)
-                        // To be more precise, let's calculate day by day for expected hours
                         let expectedInMonth = 0;
                         let tempDate = new Date(mS);
                         const hS = new Set((this.holidays[cY.toString()] || []).map(h => h.date));
                         while (tempDate <= mE) {
-                            const d = tempDate.getDay();
-                            const dS = tempDate.toISOString().split('T')[0];
-                            if (d !== 0 && d !== 6 && !hS.has(dS)) {
+                            const dS = tempDate.getFullYear() + '-' + String(tempDate.getMonth() + 1).padStart(2, '0') + '-' + String(tempDate.getDate()).padStart(2, '0');
+                            if (tempDate.getDay() !== 0 && tempDate.getDay() !== 6 && !hS.has(dS)) {
                                 expectedInMonth += this.getWorkloadForDate(dS) * 60;
                             }
                             tempDate.setDate(tempDate.getDate() + 1);
                         }
 
-                        // Bonuses in this specific month
-                        const bonusesInMonth = this.state.bonuses.filter(b => {
+                        const bonusesInMonth = bonuses.filter(b => {
+                            if (!b.date) return false;
                             const bD = new Date(b.date + 'T00:00:00');
-                            return bD.getMonth() === cM && bD.getFullYear() === cY;
-                        }).reduce((acc, b) => acc + b.minutes, 0);
-
-                        // Actual balance for this specific month
-                        // Monthly balance = worked - (days_worked * workload) + bonuses
-                        // Wait, user defines balance as worked - expected? 
-                        // Usually it's Worked - (DailyWorkload * DaysWorked) + Bonuses
-                        // The previous code used: wMTM - (dC * dailyWorkload * 60) + bTM
-                        // Let's stick to that but use dynamic workload
+                            return !isNaN(bD.getTime()) && bD.getMonth() === cM && bD.getFullYear() === cY;
+                        }).reduce((acc, b) => acc + (b.minutes || 0), 0);
 
                         let monthBalance = 0;
                         if (daysWorkedInMonth.size > 0) {
@@ -1759,38 +1823,57 @@
                             });
                             monthBalance = workedInMonth - expectedForDaysWorked + bonusesInMonth;
                         } else {
-                            // If no days worked, balance is just bonuses (if any)
+                            // Se não trabalhou mas tem bônus, o balanço é o bônus
+                            // IMPORTANTE: se é um mês de desenvolvimento (ignorado), o balance será 0
                             monthBalance = bonusesInMonth;
                         }
 
-                        if (isViewingMonth) {
-                            workedThisMonth = workedInMonth;
-                            expectedThisMonth = expectedInMonth;
-                            bonusesThisMonth = bonusesInMonth;
-                            daysCompletedThisMonth = daysWorkedInMonth.size;
-                            totalNetworkDaysThisMonth = tWDIM;
-                            prevMonthBalance = totalCumulativeBalance;
+                        if (currentCalcDate < viewingStart) {
+                            if (!isIgnored) prevMonthBalance += monthBalance;
                         }
 
-                        totalCumulativeBalance += monthBalance;
+                        if (isViewingMonth) {
+                            workedInViewingMonth = workedInMonth;
+                            expectedInViewingMonth = expectedInMonth;
+                            bonusesInViewingMonth = bonusesInMonth;
+                            daysWorkedInViewingMonth = daysWorkedInMonth.size;
+                            networkDaysInViewingMonth = tWDIM;
+                        }
+
+                        // Acumula no Total Global apenas se não for ignorado
+                        if (!isIgnored) {
+                            totalCumulativeBalance += monthBalance;
+                        }
+
                         currentCalcDate.setMonth(currentCalcDate.getMonth() + 1);
                     }
 
-                    const currentMonthBalance = totalCumulativeBalance - prevMonthBalance;
+                    // Saldo do Mês = Trabalhado - Esperado (dos dias trabalhados) + Bônus
+                    let currentMonthBal = 0;
+                    if (daysWorkedInViewingMonth > 0) {
+                        let expectedInViewingForWorked = 0;
+                        const daysArr = Array.from(new Set(entries.filter(e => {
+                            const d = new Date(e.date + 'T00:00:00');
+                            return d.getMonth() === viewingMonth && d.getFullYear() === viewingYear;
+                        }).map(e => e.date)));
+                        daysArr.forEach(d => {
+                            expectedInViewingForWorked += this.getWorkloadForDate(d) * 60;
+                        });
+                        currentMonthBal = workedInViewingMonth - expectedInViewingForWorked + bonusesInViewingMonth;
+                    } else {
+                        currentMonthBal = bonusesInViewingMonth;
+                    }
 
-                    this.dom.workedHoursEl.textContent = TimeTrackerApp.formatMinutesToHHMM(workedThisMonth);
-                    this.dom.expectedHoursEl.textContent = TimeTrackerApp.formatMinutesToHHMM(expectedThisMonth);
-                    this.dom.bonifiedHoursDisplayEl.textContent = TimeTrackerApp.formatMinutesToHHMM(bonusesThisMonth);
-                    this.dom.prevMonthBalanceEl.textContent = TimeTrackerApp.formatMinutesToHHMM(prevMonthBalance);
-                    this.dom.currentMonthBalanceEl.textContent = TimeTrackerApp.formatMinutesToHHMM(currentMonthBalance);
-                    this.dom.timeBalanceEl.textContent = TimeTrackerApp.formatMinutesToHHMM(totalCumulativeBalance);
-
-                    this.dom.timeBalanceEl.parentElement.className = totalCumulativeBalance >= 0 ? 'metric-card positive' : 'metric-card negative';
-                    this.dom.currentMonthBalanceEl.parentElement.className = currentMonthBalance >= 0 ? 'metric-card positive' : 'metric-card negative';
-
-                    this.dom.daysCompletedEl.textContent = daysCompletedThisMonth;
-                    this.dom.daysTotalEl.textContent = totalNetworkDaysThisMonth;
-                    this.dom.daysRemainingEl.textContent = Math.max(0, totalNetworkDaysThisMonth - daysCompletedThisMonth);
+                    return {
+                        totalBalance: totalCumulativeBalance,
+                        workedMinutesThisMonth: workedInViewingMonth,
+                        expectedMinutesThisMonth: expectedInViewingMonth,
+                        balancePreviousMonth: prevMonthBalance,
+                        bonificationsThisMonth: bonusesInViewingMonth,
+                        currentMonthBalance: currentMonthBal,
+                        daysCompletedInMonth: daysWorkedInViewingMonth,
+                        totalNetworkDaysInMonth: networkDaysInViewingMonth
+                    };
                 }
                 renderHolidays() { const today = new Date(); today.setHours(0, 0, 0, 0); this.dom.holidayListEl.innerHTML = ''; const allHolidays = Object.values(this.holidays).flat(); const upcoming = allHolidays.map(h => ({ ...h, dateObj: new Date(h.date + 'T00:00:00') })).filter(h => h.dateObj >= today).sort((a, b) => a.dateObj - b.dateObj); if (upcoming.length === 0) { this.dom.holidayListEl.innerHTML = `<li><span>Nenhum feriado futuro.</span></li>`; return; } upcoming.forEach(h => { this.dom.holidayListEl.innerHTML += `<li><span>${h.name}</span> <span class="date">${h.dateObj.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}</span></li>`; }); }
                 openModal(modal) { if (modal) modal.classList.add('visible'); }
@@ -1808,12 +1891,16 @@
                     this.dom.openSettingsModalBtn.addEventListener('click', () => {
                         document.getElementById('daily-workload').value = this.state.settings.dailyWorkload;
                         this.renderWorkloadHistory();
+                        this.renderIgnoredMonths();
                         this.openModal(this.dom.settingsModal);
                     });
                     this.dom.openBonifiedModalBtn.addEventListener('click', () => {
                         this.dom.bonifiedForm.reset();
                         this.dom.bonifiedDateInput.value = new Date().toISOString().split('T')[0];
                         this.openModal(this.dom.bonifiedModal);
+                    });
+                    this.dom.openPunchModalBtn.addEventListener('click', () => {
+                        this.openModal(this.dom.punchModal);
                     });
                     this.dom.punchButton.addEventListener('click', () => this.handlePunch()); // Evento para registrar o ponto rápido
 
@@ -1861,6 +1948,7 @@
                         e.target.reset();
                     });
                     this.dom.openPrevMonthModalBtn.addEventListener('click', (e) => { e.preventDefault(); this.showPrevMonthDetails(); });
+                    this.dom.openBonifiedDetailsBtn.addEventListener('click', () => this.showBonifiedDetails());
 
                     this.dom.addWorkloadHistoryBtn.addEventListener('click', () => {
                         const date = this.dom.workloadHistoryDate.value;
@@ -1875,6 +1963,39 @@
                         this.dom.workloadHistoryDate.value = '';
                         this.dom.workloadHistoryHours.value = '';
                     });
+
+                    this.dom.addIgnoredMonthBtn.addEventListener('click', () => {
+                        const month = parseInt(this.dom.ignoredMonthSelect.value);
+                        const year = parseInt(this.dom.ignoredYearSelect.value);
+                        if (!this.state.settings.ignoredMonths) this.state.settings.ignoredMonths = [];
+
+                        if (this.state.settings.ignoredMonths.some(im => im.month === month && im.year === year)) return;
+
+                        this.state.settings.ignoredMonths.push({ month, year });
+                        this.saveData();
+                        this.renderIgnoredMonths();
+                        this.renderDashboard();
+                    });
+                }
+
+                renderIgnoredMonths() {
+                    const months = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+                    const ignored = this.state.settings.ignoredMonths || [];
+                    this.dom.ignoredMonthsList.innerHTML = ignored.map((im, i) => `
+                        <li style="display: flex; justify-content: space-between; align-items: center; padding: 0.5rem; border-bottom: 1px solid var(--border-color);">
+                            <span>${months[im.month]} / ${im.year}</span>
+                            <i data-feather="trash-2" style="cursor: pointer; width: 14px; height: 14px; color: var(--error-color);" onclick="window.appInstance.removeIgnoredMonth(${i})"></i>
+                        </li>
+                    `).join('');
+                    if (ignored.length === 0) this.dom.ignoredMonthsList.innerHTML = '<li style="padding: 0.5rem; color: var(--text-secondary);">Nenhum mês ignorado.</li>';
+                    feather.replace();
+                }
+
+                removeIgnoredMonth(index) {
+                    this.state.settings.ignoredMonths.splice(index, 1);
+                    this.saveData();
+                    this.renderIgnoredMonths();
+                    this.renderDashboard();
                 }
 
                 renderWorkloadHistory() {
@@ -1893,13 +2014,45 @@
                     this.state.settings.workloadHistory.splice(index, 1);
                     this.renderWorkloadHistory();
                 }
-                deleteEntry(id) {
-                    this.state.entries = this.state.entries.filter(e => e.id !== id);
-                    // Se a entrada excluída for a entrada de hoje, reseta o estado do punch rápido
-                    if (id === this.punchState.currentEntryId) {
-                        this.punchState = { nextAction: 'Start', currentEntryId: null, entryDate: null };
+
+                showBonifiedDetails() {
+                    const viewingMonth = this.viewingDate.month;
+                    const viewingYear = this.viewingDate.year;
+                    const bonusesInMonth = this.state.bonuses.filter(b => {
+                        const bD = new Date(b.date + 'T00:00:00');
+                        return bD.getMonth() === viewingMonth && bD.getFullYear() === viewingYear;
+                    });
+
+                    this.dom.bonifiedDetailsTbody.innerHTML = bonusesInMonth.sort((a, b) => new Date(b.date) - new Date(a.date)).map(b => `
+                        <tr>
+                            <td>${new Date(b.date + 'T00:00:00').toLocaleDateString('pt-BR')}</td>
+                            <td>${b.description || '-'}</td>
+                            <td>${TimeTrackerApp.formatMinutesToHHMM(b.minutes)}</td>
+                            <td><i data-feather="trash-2" class="delete-icon" onclick="window.appInstance.deleteBonus('${b.id}')"></i></td>
+                        </tr>
+                    `).join('') || `<tr><td colspan="4" style="text-align:center; padding: 2rem;">Nenhum bônus neste mês.</td></tr>`;
+
+                    this.openModal(this.dom.bonifiedDetailsModal);
+                    feather.replace();
+                }
+
+                deleteBonus(id) {
+                    if (confirm('Tem certeza que deseja excluir este bônus?')) {
+                        this.state.bonuses = this.state.bonuses.filter(b => b.id !== id);
+                        this.saveData();
+                        this.showBonifiedDetails();
+                        this.renderDashboard();
                     }
-                    this.saveData();
+                }
+                deleteEntry(id) {
+                    if (confirm('Tem certeza que deseja excluir este registro?')) {
+                        this.state.entries = this.state.entries.filter(e => e.id !== id);
+                        if (id === this.punchState.currentEntryId) {
+                            this.punchState = { nextAction: 'Start', currentEntryId: null, entryDate: null };
+                        }
+                        this.saveData();
+                        this.render();
+                    }
                 }
 
                 editEntry(id) {
@@ -2055,6 +2208,27 @@
                                 </table>
                             </div>
                         </section>
+                        <section class="card" style="margin-top: 1rem;">
+                            <h3>Bônus (Mês Selecionado)</h3>
+                            <div class="table-wrapper" style="max-height: 200px; margin-top: 0.5rem;">
+                                <table class="entries-table">
+                                    <thead><tr><th>Data</th><th>Descrição</th><th>Duração</th></tr></thead>
+                                    <tbody>
+                                        ${(userData.bonuses || [])
+                            .filter(b => {
+                                const d = new Date(b.date + 'T00:00:00');
+                                return d.getMonth() === viewingMonth && d.getFullYear() === viewingYear;
+                            })
+                            .sort((a, b) => new Date(b.date) - new Date(a.date)).map(b => `
+                                            <tr>
+                                                <td>${new Date(b.date + 'T00:00:00').toLocaleDateString('pt-BR')}</td>
+                                                <td>${b.description || '-'}</td>
+                                                <td>${TimeTrackerApp.formatMinutesToHHMM(b.minutes)}</td>
+                                            </tr>`).join('') || `<tr><td colspan="3" style="text-align:center; padding: 1rem;">Nenhum bônus.</td></tr>`}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </section>
                         <aside class="dashboard">
                             </aside>
                     </main>
@@ -2088,86 +2262,59 @@
 
                 calculateUserMetrics(userData, viewingMonth, viewingYear) {
                     const appHelper = new TimeTrackerApp(null);
-                    appHelper.state = { settings: userData.settings, entries: userData.entries, bonuses: userData.bonuses };
-
-                    const allDates = [...userData.entries.map(e => e.date), ...(userData.bonuses || []).map(b => b.date)].sort();
-                    if (allDates.length === 0) return { balancePreviousMonth: 0, workedMinutesThisMonth: 0, expectedMinutesThisMonth: 0, bonificationsThisMonth: 0, currentMonthBalance: 0, totalBalance: 0 };
-
-                    const firstDate = new Date(allDates[0] + 'T00:00:00');
-                    const lastViewingMonthDate = new Date(viewingYear, viewingMonth, 1);
-
-                    let totalCumulativeBalance = 0;
-                    let prevMonthBalance = 0;
-                    let workedThisMonth = 0;
-                    let expectedThisMonth = 0;
-                    let bonusesThisMonth = 0;
-
-                    let currentCalcDate = new Date(firstDate.getFullYear(), firstDate.getMonth(), 1);
-                    while (currentCalcDate <= lastViewingMonthDate) {
-                        const cM = currentCalcDate.getMonth();
-                        const cY = currentCalcDate.getFullYear();
-                        const isViewingMonth = (cM === viewingMonth && cY === viewingYear);
-
-                        let workedInMonth = 0;
-                        const daysWorkedInMonth = new Set();
-                        userData.entries.forEach(e => {
-                            const eD = new Date(e.date + 'T00:00:00');
-                            if (eD.getMonth() === cM && eD.getFullYear() === cY) {
-                                workedInMonth += TimeTrackerApp.calculateWorkedMinutes(e);
-                                daysWorkedInMonth.add(e.date);
-                            }
-                        });
-
-                        const mS = new Date(cY, cM, 1);
-                        const mE = new Date(cY, cM + 1, 0);
-                        let expectedInMonth = 0;
-                        let tempDate = new Date(mS);
-                        const hS = new Set((appHelper.holidays[cY.toString()] || []).map(h => h.date));
-                        while (tempDate <= mE) {
-                            if (tempDate.getDay() !== 0 && tempDate.getDay() !== 6 && !hS.has(tempDate.toISOString().split('T')[0])) {
-                                expectedInMonth += appHelper.getWorkloadForDate(tempDate.toISOString().split('T')[0]) * 60;
-                            }
-                            tempDate.setDate(tempDate.getDate() + 1);
-                        }
-
-                        const bonusesInMonth = (userData.bonuses || []).filter(b => {
-                            const bD = new Date(b.date + 'T00:00:00');
-                            return bD.getMonth() === cM && bD.getFullYear() === cY;
-                        }).reduce((acc, b) => acc + b.minutes, 0);
-
-                        let monthBalance = 0;
-                        if (daysWorkedInMonth.size > 0) {
-                            let expectedForDaysWorked = 0;
-                            daysWorkedInMonth.forEach(dateStr => { expectedForDaysWorked += appHelper.getWorkloadForDate(dateStr) * 60; });
-                            monthBalance = workedInMonth - expectedForDaysWorked + bonusesInMonth;
-                        } else {
-                            monthBalance = bonusesInMonth;
-                        }
-
-                        if (isViewingMonth) {
-                            workedThisMonth = workedInMonth;
-                            expectedThisMonth = expectedInMonth;
-                            bonusesThisMonth = bonusesInMonth;
-                            prevMonthBalance = totalCumulativeBalance;
-                        }
-
-                        totalCumulativeBalance += monthBalance;
-                        currentCalcDate.setMonth(currentCalcDate.getMonth() + 1);
-                    }
-
-                    return {
-                        balancePreviousMonth: prevMonthBalance,
-                        workedMinutesThisMonth: workedThisMonth,
-                        expectedMinutesThisMonth: expectedThisMonth,
-                        bonificationsThisMonth: bonusesThisMonth,
-                        currentMonthBalance: totalCumulativeBalance - prevMonthBalance,
-                        totalBalance: totalCumulativeBalance
-                    };
+                    return appHelper.calculateMetricsForPeriod(userData, viewingMonth, viewingYear);
                 }
             }
 
             window.appInstance = null;
             window.adminInstance = null;
+
+            const logout = () => {
+                if (window.appInstance) { window.appInstance.cleanup(); window.appInstance = null; }
+                if (window.adminInstance) { window.adminInstance.cleanup(); window.adminInstance = null; }
+                auth.signOut();
+            };
+            const btnLogout = document.getElementById('logout-btn');
+            const btnAdminLogout = document.getElementById('admin-logout-btn');
+            if (btnLogout) btnLogout.addEventListener('click', logout);
+            if (btnAdminLogout) btnAdminLogout.addEventListener('click', logout);
+
+            auth.onAuthStateChanged(user => {
+                if (typeof btnAppToAdmin !== 'undefined') btnAppToAdmin.style.display = 'none';
+
+                if (user) {
+                    db.collection('users').doc(user.uid).get().then(doc => {
+                        const userData = doc.exists ? doc.data() : {};
+                        if (userData.role === 'admin') {
+                            if (!window.adminInstance) initializeAdminApp(user);
+                            if (!window.appInstance) initializeEmployeeApp(user, false);
+                            if (typeof btnAppToAdmin !== 'undefined') btnAppToAdmin.style.display = 'inline-flex';
+                            showPage('app-page');
+                        } else {
+                            if (!window.appInstance) initializeEmployeeApp(user, true);
+                            showPage('app-page');
+                        }
+                    }).catch(err => {
+                        console.error("Erro ao buscar role:", err);
+                        if (!window.appInstance) initializeEmployeeApp(user, true);
+                        showPage('app-page');
+                    });
+                } else {
+                    showPage('login-page');
+                    if (window.appInstance) { window.appInstance.cleanup(); window.appInstance = null; }
+                    if (window.adminInstance) { window.adminInstance.cleanup(); window.adminInstance = null; }
+                }
+            });
+
+            function initializeEmployeeApp(user, openPunchModal = false) {
+                window.appInstance = new TimeTrackerApp(user, openPunchModal);
+                window.appInstance.init();
+            }
+
+            function initializeAdminApp(user) {
+                window.adminInstance = new AdminApp(user);
+                window.adminInstance.init();
+            }
         });
     </script>
 </body>
