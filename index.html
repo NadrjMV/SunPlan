@@ -1363,7 +1363,7 @@
                     this.openPunchModalOnLoad = openPunchModal; // Flag para abrir o modal na carga
                     this.holidays = {
                         '2025': [{ date: '2025-01-01', name: 'Confraternização Universal' }, { date: '2025-03-04', name: 'Carnaval' }, { date: '2025-04-18', name: 'Paixão de Cristo' }, { date: '2025-04-21', name: 'Tiradentes' }, { date: '2025-05-01', name: 'Dia do Trabalho' }, { date: '2025-06-19', name: 'Corpus Christi' }, { date: '2025-09-07', name: 'Independência do Brasil' }, { date: '2025-10-12', name: 'Nossa Senhora Aparecida' }, { date: '2025-11-02', name: 'Finados' }, { date: '2025-11-15', name: 'Proclamação da República' }, { date: '2025-12-25', name: 'Natal' }],
-                        '2026': [{ date: '2026-01-01', name: 'Confraternização Universal' }, { date: '2026-02-17', name: 'Carnaval' }, { date: '2026-04-03', name: 'Paixão de Cristo' }, { date: '2026-04-21', name: 'Tiradentes' }, { date: '2026-05-01', name: 'Dia do Trabalho' }, { date: '2026-06-04', name: 'Corpus Christi' }, { date: '2026-09-07', name: 'Independência do Brasil' }, { date: '2026-10-12', name: 'Nossa Senhora Aparecida' }, { date: '2026-11-02', name: 'Finados' }, { date: '2026-11-15', name: 'Proclamação da República' }, { date: '2026-12-25', name: 'Natal' }]
+                        '2026': [{ date: '2026-01-01', name: 'Confraternização Universal' }, { date: '2026-04-03', name: 'Paixão de Cristo' }, { date: '2026-04-21', name: 'Tiradentes' }, { date: '2026-05-01', name: 'Dia do Trabalho' }, { date: '2026-06-04', name: 'Corpus Christi' }, { date: '2026-09-07', name: 'Independência do Brasil' }, { date: '2026-10-12', name: 'Nossa Senhora Aparecida' }, { date: '2026-11-02', name: 'Finados' }, { date: '2026-11-15', name: 'Proclamação da República' }, { date: '2026-12-25', name: 'Natal' }]
                     };
                     // Estado do ponto rápido: qual é a próxima ação esperada (Start, LunchStart, LunchEnd, End)
                     this.punchState = { nextAction: 'Start', currentEntryId: null, entryDate: null };
@@ -1746,20 +1746,21 @@
                         ...bonuses.map(b => b.date)
                     ].filter(d => d).sort();
 
+                    if (allDatesArr.length === 0) {
+                        return {
+                            workedMinutesThisMonth: 0, expectedMinutesThisMonth: 0, balancePreviousMonth: 0,
+                            bonificationsThisMonth: 0, currentMonthBalance: 0, totalBalance: 0,
+                            daysCompletedInMonth: 0, totalNetworkDaysInMonth: 0
+                        };
+                    }
+
+                    const firstEntryDateStr = allDatesArr[0]; // YYYY-MM-DD
                     const today = new Date();
                     const currentRealMonth = today.getMonth();
                     const currentRealYear = today.getFullYear();
 
                     const viewingStart = new Date(viewingYear, viewingMonth, 1);
-
-                    let calculationStart;
-                    if (allDatesArr.length > 0) {
-                        const firstDataDate = new Date(allDatesArr[0] + 'T00:00:00');
-                        calculationStart = new Date(Math.min(firstDataDate.getTime(), viewingStart.getTime()));
-                    } else {
-                        calculationStart = new Date(viewingStart.getTime());
-                    }
-                    calculationStart.setDate(1);
+                    const calculationStart = new Date(new Date(firstEntryDateStr + 'T00:00:00').getFullYear(), new Date(firstEntryDateStr + 'T00:00:00').getMonth(), 1);
 
                     let totalCumulativeBalance = 0;
                     let prevMonthBalance = 0;
@@ -1771,7 +1772,6 @@
 
                     let currentCalcDate = new Date(calculationStart.getFullYear(), calculationStart.getMonth(), 1);
 
-                    // Calculamos até o maior valor entre o mês sendo visto e o mês atual real (para garantir o Total absoluto)
                     const lastDateToCalc = new Date(Math.max(
                         new Date(viewingYear, viewingMonth, 1).getTime(),
                         new Date(currentRealYear, currentRealMonth, 1).getTime()
@@ -1788,45 +1788,39 @@
                         entries.forEach(e => {
                             if (!e.date) return;
                             const eD = new Date(e.date + 'T00:00:00');
-                            if (!isNaN(eD.getTime()) && eD.getMonth() === cM && eD.getFullYear() === cY) {
+                            if (eD.getMonth() === cM && eD.getFullYear() === cY) {
                                 workedInMonth += TimeTrackerApp.calculateWorkedMinutes(e);
                                 daysWorkedInMonth.add(e.date);
                             }
                         });
 
-                        const mS = new Date(cY, cM, 1);
-                        const mE = new Date(cY, cM + 1, 0);
-                        const tWDIM = this.networkDays(mS, mE, cY.toString());
+                        const bonusesInMonth = bonuses.filter(b => {
+                            if (!b.date) return false;
+                            const bD = new Date(b.date + 'T00:00:00');
+                            return bD.getMonth() === cM && bD.getFullYear() === cY;
+                        }).reduce((acc, b) => acc + (b.minutes || 0), 0);
 
                         let expectedInMonth = 0;
-                        let tempDate = new Date(mS);
+                        let expectedChargeableInMonth = 0;
+                        let tempDate = new Date(cY, cM, 1);
+                        const lastDayOfMonth = new Date(cY, cM + 1, 0);
                         const hS = new Set((this.holidays[cY.toString()] || []).map(h => h.date));
-                        while (tempDate <= mE) {
+
+                        while (tempDate <= lastDayOfMonth) {
                             const dS = tempDate.getFullYear() + '-' + String(tempDate.getMonth() + 1).padStart(2, '0') + '-' + String(tempDate.getDate()).padStart(2, '0');
-                            if (tempDate.getDay() !== 0 && tempDate.getDay() !== 6 && !hS.has(dS)) {
+                            const isWeekend = tempDate.getDay() === 0 || tempDate.getDay() === 6;
+                            const isHoliday = hS.has(dS);
+
+                            if (!isWeekend && !isHoliday) {
                                 expectedInMonth += this.getWorkloadForDate(dS) * 60;
+                                if (dS >= firstEntryDateStr) {
+                                    expectedChargeableInMonth += this.getWorkloadForDate(dS) * 60;
+                                }
                             }
                             tempDate.setDate(tempDate.getDate() + 1);
                         }
 
-                        const bonusesInMonth = bonuses.filter(b => {
-                            if (!b.date) return false;
-                            const bD = new Date(b.date + 'T00:00:00');
-                            return !isNaN(bD.getTime()) && bD.getMonth() === cM && bD.getFullYear() === cY;
-                        }).reduce((acc, b) => acc + (b.minutes || 0), 0);
-
-                        let monthBalance = 0;
-                        if (daysWorkedInMonth.size > 0) {
-                            let expectedForDaysWorked = 0;
-                            daysWorkedInMonth.forEach(dateStr => {
-                                expectedForDaysWorked += this.getWorkloadForDate(dateStr) * 60;
-                            });
-                            monthBalance = workedInMonth - expectedForDaysWorked + bonusesInMonth;
-                        } else {
-                            // Se não trabalhou mas tem bônus, o balanço é o bônus
-                            // IMPORTANTE: se é um mês de desenvolvimento (ignorado), o balance será 0
-                            monthBalance = bonusesInMonth;
-                        }
+                        const monthBalance = workedInMonth - expectedChargeableInMonth + bonusesInMonth;
 
                         if (currentCalcDate < viewingStart) {
                             if (!isIgnored) prevMonthBalance += monthBalance;
@@ -1837,31 +1831,12 @@
                             expectedInViewingMonth = expectedInMonth;
                             bonusesInViewingMonth = bonusesInMonth;
                             daysWorkedInViewingMonth = daysWorkedInMonth.size;
-                            networkDaysInViewingMonth = tWDIM;
+                            networkDaysInViewingMonth = this.networkDays(new Date(cY, cM, 1), new Date(cY, cM + 1, 0), cY.toString());
                         }
 
-                        // Acumula no Total Global apenas se não for ignorado
-                        if (!isIgnored) {
-                            totalCumulativeBalance += monthBalance;
-                        }
+                        if (!isIgnored) totalCumulativeBalance += monthBalance;
 
                         currentCalcDate.setMonth(currentCalcDate.getMonth() + 1);
-                    }
-
-                    // Saldo do Mês = Trabalhado - Esperado (dos dias trabalhados) + Bônus
-                    let currentMonthBal = 0;
-                    if (daysWorkedInViewingMonth > 0) {
-                        let expectedInViewingForWorked = 0;
-                        const daysArr = Array.from(new Set(entries.filter(e => {
-                            const d = new Date(e.date + 'T00:00:00');
-                            return d.getMonth() === viewingMonth && d.getFullYear() === viewingYear;
-                        }).map(e => e.date)));
-                        daysArr.forEach(d => {
-                            expectedInViewingForWorked += this.getWorkloadForDate(d) * 60;
-                        });
-                        currentMonthBal = workedInViewingMonth - expectedInViewingForWorked + bonusesInViewingMonth;
-                    } else {
-                        currentMonthBal = bonusesInViewingMonth;
                     }
 
                     return {
@@ -1870,7 +1845,7 @@
                         expectedMinutesThisMonth: expectedInViewingMonth,
                         balancePreviousMonth: prevMonthBalance,
                         bonificationsThisMonth: bonusesInViewingMonth,
-                        currentMonthBalance: currentMonthBal,
+                        currentMonthBalance: workedInViewingMonth - expectedInViewingMonth + bonusesInViewingMonth,
                         daysCompletedInMonth: daysWorkedInViewingMonth,
                         totalNetworkDaysInMonth: networkDaysInViewingMonth
                     };
