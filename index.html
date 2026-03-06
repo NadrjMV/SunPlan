@@ -1533,8 +1533,7 @@
 
                 // FUNÇÕES DE PONTO RÁPIDO
                 updatePunchState(savedState) {
-                    const now = new Date();
-                    const todayDate = now.toLocaleDateString('sv').split(' ')[0];
+                    const todayDate = TimeTrackerApp.getTodayStr();
                     // Pick the last entry created for today, or the first one that is incomplete
                     let todayEntries = (this.state.entries || []).filter(e => e.date === todayDate);
                     let todayEntry = todayEntries.find(e => !e.endTime) || todayEntries[todayEntries.length - 1];
@@ -1597,8 +1596,8 @@
 
                 async handlePunch() {
                     const now = new Date();
-                    const nowTime = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', hour12: false }); // HH:MM
-                    const todayDate = now.toLocaleDateString('sv').split(' ')[0];
+                    const nowTime = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', hour12: false });
+                    const todayDate = TimeTrackerApp.getTodayStr();
                     const entryId = this.punchState.currentEntryId;
 
                     // Se o dia do estado salvo for diferente de hoje E não estiver em 'Done', é um problema de dia virado/aberto
@@ -1668,11 +1667,15 @@
 
                 static timeToMinutes(str) { if (!str) return 0; const [h, m] = str.split(':').map(Number); return (h || 0) * 60 + (m || 0); }
                 static formatMinutesToHHMM(mins) { if (isNaN(mins)) return '00:00'; const s = mins < 0 ? '-' : ''; const a = Math.abs(mins); const h = Math.floor(a / 60); const m = Math.round(a % 60); return `${s}${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`; }
+                static getTodayStr() {
+                    const now = new Date();
+                    return now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
+                }
 
                 static calculateWorkedMinutes(e) {
                     if (!e.startTime) return 0;
 
-                    const todayStr = new Date().toLocaleDateString('sv').split(' ')[0];
+                    const todayStr = TimeTrackerApp.getTodayStr();
                     const endTime = e.endTime || (e.date === todayStr ? new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', hour12: false }) : '');
                     if (!endTime) return 0;
 
@@ -1746,7 +1749,7 @@
                     const viewingMonth = this.viewingDate.month;
                     const viewingYear = this.viewingDate.year;
 
-                    const metrics = this.calculateMetricsForPeriod(this.state, viewingMonth, viewingYear);
+                    const metrics = this.calculateMetricsForPeriod(this.state, viewingMonth, viewingYear, this.punchState);
 
                     const monthNames = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
                     this.dom.currentMonthDisplay.textContent = `Mês de ${monthNames[viewingMonth]}`;
@@ -1766,7 +1769,7 @@
                     this.dom.daysRemainingEl.textContent = Math.max(0, metrics.totalNetworkDaysInMonth - metrics.daysCompletedInMonth);
                 }
 
-                calculateMetricsForPeriod(state, viewingMonth, viewingYear) {
+                calculateMetricsForPeriod(state, viewingMonth, viewingYear, punchState = null) {
                     const entries = state.entries || [];
                     const bonuses = state.bonuses || [];
                     const settings = state.settings || {};
@@ -1787,7 +1790,7 @@
 
                     const firstEntryDateStr = allDatesArr[0]; // YYYY-MM-DD
                     const today = new Date();
-                    const todayStr = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0');
+                    const todayStr = TimeTrackerApp.getTodayStr();
                     const currentRealMonth = today.getMonth();
                     const currentRealYear = today.getFullYear();
 
@@ -1795,6 +1798,7 @@
                     const calculationStart = new Date(new Date(firstEntryDateStr + 'T00:00:00').getFullYear(), new Date(firstEntryDateStr + 'T00:00:00').getMonth(), 1);
 
                     let totalCumulativeBalance = 0;
+                    let totalBalanceViewingMonth = 0;
                     let prevMonthBalance = 0;
                     let workedInViewingMonth = 0;
                     let expectedInViewingMonth = 0;
@@ -1817,12 +1821,21 @@
                         const isIgnored = ignoredMonths.some(im => im.month === cM && im.year === cY);
 
                         let workedInMonth = 0;
+                        let workedInMonthConsolidated = 0;
                         const daysWorkedInMonth = new Set();
                         entries.forEach(e => {
                             if (!e.date) return;
                             const eD = new Date(e.date + 'T00:00:00');
                             if (eD.getMonth() === cM && eD.getFullYear() === cY) {
-                                workedInMonth += TimeTrackerApp.calculateWorkedMinutes(e);
+                                const mins = TimeTrackerApp.calculateWorkedMinutes(e);
+                                workedInMonth += mins;
+
+                                const isToday = (e.date === todayStr);
+                                const isDone = punchState && punchState.nextAction === 'Done';
+                                if (!isToday || isDone) {
+                                    workedInMonthConsolidated += mins;
+                                }
+
                                 daysWorkedInMonth.add(e.date);
                             }
                         });
@@ -1847,14 +1860,19 @@
                             if (!isWeekend && !isHoliday) {
                                 expectedInMonth += this.getWorkloadForDate(settings, dS) * 60;
                                 // Só desconta do banco se for >= primeiro registro E se for <= hoje (para não negativar o mês futuro)
+                                // NOVIDADE: Se for hoje (dS === todayStr), só desconta se o ponto estiver FECHADO (nextAction === 'Done')
                                 if (dS >= firstEntryDateStr && dS <= todayStr) {
-                                    expectedChargeableInMonth += this.getWorkloadForDate(settings, dS) * 60;
+                                    const isToday = (dS === todayStr);
+                                    const isDone = punchState && punchState.nextAction === 'Done';
+                                    if (!isToday || isDone) {
+                                        expectedChargeableInMonth += this.getWorkloadForDate(settings, dS) * 60;
+                                    }
                                 }
                             }
                             tempDate.setDate(tempDate.getDate() + 1);
                         }
 
-                        const monthBalance = workedInMonth - expectedChargeableInMonth + bonusesInMonth;
+                        const monthBalance = workedInMonthConsolidated - expectedChargeableInMonth + bonusesInMonth;
 
                         if (currentCalcDate < viewingStart) {
                             if (!isIgnored) prevMonthBalance += monthBalance;
@@ -1870,12 +1888,13 @@
                         }
 
                         if (!isIgnored) totalCumulativeBalance += monthBalance;
+                        if (isViewingMonth) totalBalanceViewingMonth = totalCumulativeBalance;
 
                         currentCalcDate.setMonth(currentCalcDate.getMonth() + 1);
                     }
 
                     return {
-                        totalBalance: totalCumulativeBalance,
+                        totalBalance: totalBalanceViewingMonth,
                         workedMinutesThisMonth: workedInViewingMonth,
                         expectedMinutesThisMonth: expectedInViewingMonth,
                         balancePreviousMonth: prevMonthBalance,
@@ -2272,7 +2291,7 @@
 
                 calculateUserMetrics(userData, viewingMonth, viewingYear) {
                     const appHelper = new TimeTrackerApp(null);
-                    return appHelper.calculateMetricsForPeriod(userData, viewingMonth, viewingYear);
+                    return appHelper.calculateMetricsForPeriod(userData, viewingMonth, viewingYear, userData.punchState);
                 }
             }
 
