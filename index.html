@@ -1356,6 +1356,7 @@
             class TimeTrackerApp {
                 constructor(user, openPunchModal) {
                     this.user = user;
+                    this.initialLoadComplete = false;
                     this.state = { entries: [], settings: { dailyWorkload: 8, workloadHistory: [], ignoredMonths: [] }, bonuses: [] };
                     this.unsubscribe = null;
                     this.userDocRef = user ? db.collection('users').doc(user.uid) : null;
@@ -1497,9 +1498,13 @@
                 // MODIFICAÇÃO: Adicionar callback para saber quando a data foi carregada
                 listenForData(callback) {
                     if (!this.userDocRef) return;
+                    
                     this.unsubscribe = this.userDocRef.onSnapshot(doc => {
                         if (doc.exists) {
                             const data = doc.data();
+                            
+                            // PROTEÇÃO: Se o banco retornar sem trackerData mas você sabe que deveria ter dados,
+                            // ou se o documento vier vazio por erro de conexão, a flag impede o saveData de rodar.
                             if (data.trackerData) {
                                 this.state = {
                                     settings: {
@@ -1510,29 +1515,41 @@
                                     entries: data.trackerData.entries || [],
                                     bonuses: data.trackerData.bonuses || []
                                 };
-                                // Restaurar/atualizar o estado do ponto rápido após carregar os dados
                                 this.updatePunchState(data.punchState);
+                                this.initialLoadComplete = true; // Libera o salvamento
+                            } else {
+                                // Caso seja um usuário realmente novo, inicializamos o estado mas com cautela
+                                this.initialLoadComplete = true; 
                             }
+                
                             applyTheme(data.theme || 'dark-theme');
                             this.render();
-                            if (callback) callback(); // Chama o callback após renderizar e atualizar o estado
+                            if (callback) callback();
                         }
-                    }, err => console.error("Erro no listener do Firestore:", err));
+                    }, err => {
+                        console.error("Erro crítico no listener do Firestore:", err);
+                        this.initialLoadComplete = false; // Bloqueia salvamento em caso de erro de rede
+                    });
                 }
 
                 saveData() { 
-                    if(!this.userDocRef || !this.user) return;
+                    // SÓ SALVA se o carregamento inicial foi concluído com sucesso.
+                    // Isso evita que um array vazio [] no estado local sobrescreva o banco por erro de latência.
+                    if (!this.userDocRef || !this.user || !this.initialLoadComplete) {
+                        console.warn("Salvamento abortado: Carregamento inicial ainda não confirmado.");
+                        return;
+                    }
                 
-                    // Em vez de enviar o state inteiro, atualizamos campos específicos.
-                    // O uso de dot notation "trackerData.entries" evita destruir outros campos do objeto.
+                    // Usamos update com dot notation para garantir integridade total do documento
                     this.userDocRef.update({ 
                         "trackerData.entries": this.state.entries,
                         "trackerData.settings": this.state.settings,
                         "trackerData.bonuses": this.state.bonuses,
                         "punchState": this.punchState 
+                    }).then(() => {
+                        console.log("Sincronização com SunShield concluída.");
                     }).catch(err => {
-                        console.error("Erro ao salvar: ", err);
-                        // Se o documento não existir, o .update falha (o que é bom, evita criar lixo)
+                        console.error("Erro ao sincronizar dados:", err);
                     });
                 }
 
