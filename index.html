@@ -1520,15 +1520,20 @@
                     }, err => console.error("Erro no listener do Firestore:", err));
                 }
 
-                saveData() {
-                    // Garantir que a lógica de salvamento do estado do ponto rápido esteja aqui
-                    if (this.userDocRef) {
-                        // Salva o estado do ponto rápido junto com os dados do tracker
-                        this.userDocRef.set({
-                            trackerData: this.state,
-                            punchState: this.punchState
-                        }, { merge: true }).catch(console.error);
-                    }
+                saveData() { 
+                    if(!this.userDocRef || !this.user) return;
+                
+                    // Em vez de enviar o state inteiro, atualizamos campos específicos.
+                    // O uso de dot notation "trackerData.entries" evita destruir outros campos do objeto.
+                    this.userDocRef.update({ 
+                        "trackerData.entries": this.state.entries,
+                        "trackerData.settings": this.state.settings,
+                        "trackerData.bonuses": this.state.bonuses,
+                        "punchState": this.punchState 
+                    }).catch(err => {
+                        console.error("Erro ao salvar: ", err);
+                        // Se o documento não existir, o .update falha (o que é bom, evita criar lixo)
+                    });
                 }
 
                 // FUNÇÕES DE PONTO RÁPIDO
