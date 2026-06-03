@@ -1576,10 +1576,16 @@
                     if (nextAction === 'End' && entry.startTime && entry.lunchStartTime && entry.lunchEndTime) {
                         const todayStr = TimeTrackerApp.getTodayStr();
                         const dailyGoalMinutes = this.getWorkloadForDate(this.state.settings, todayStr) * 60;
-                        const morningMinutes = TimeTrackerApp.timeToMinutes(entry.lunchStartTime) - TimeTrackerApp.timeToMinutes(entry.startTime);
+                        let t0 = TimeTrackerApp.timeToMinutes(entry.startTime);
+                        let t1 = TimeTrackerApp.timeToMinutes(entry.lunchStartTime);
+                        let t2 = TimeTrackerApp.timeToMinutes(entry.lunchEndTime);
+                        if (t1 < t0) t1 += 1440;
+                        if (t2 < t1) t2 += 1440;
+                        const morningMinutes = t1 - t0;
                         const remainingMinutes = dailyGoalMinutes - morningMinutes;
-                        const exitMinutes = TimeTrackerApp.timeToMinutes(entry.lunchEndTime) + remainingMinutes;
-                        predictionText = ` (Sua saída ideal é às ${TimeTrackerApp.formatMinutesToHHMM(exitMinutes)})`;
+                        const exitMinutes = t2 + remainingMinutes;
+                        const formattedExitTime = TimeTrackerApp.formatMinutesToHHMM((exitMinutes % 1440 + 1440) % 1440);
+                        predictionText = ` (Sua saída ideal é às ${formattedExitTime})`;
                     }
 
                     const actionMap = {
@@ -1672,13 +1678,34 @@
                     const todayStr = TimeTrackerApp.getTodayStr();
                     const endTime = e.endTime || (e.date === todayStr ? new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', hour12: false }) : '');
                     if (!endTime) return 0;
-                    let total = TimeTrackerApp.timeToMinutes(endTime) - TimeTrackerApp.timeToMinutes(e.startTime);
+                    
+                    let t0 = TimeTrackerApp.timeToMinutes(e.startTime);
+                    let t1 = e.lunchStartTime ? TimeTrackerApp.timeToMinutes(e.lunchStartTime) : null;
+                    let t2 = null;
                     if (e.lunchStartTime) {
                         const lunchEnd = e.lunchEndTime || (e.date === todayStr && e.lunchStartTime ? new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', hour12: false }) : '');
                         if (lunchEnd) {
-                            const lunch = TimeTrackerApp.timeToMinutes(lunchEnd) - TimeTrackerApp.timeToMinutes(e.lunchStartTime);
-                            total = total - lunch;
+                            t2 = TimeTrackerApp.timeToMinutes(lunchEnd);
                         }
+                    }
+                    let t3 = TimeTrackerApp.timeToMinutes(endTime);
+
+                    if (t1 !== null) {
+                        if (t1 < t0) t1 += 1440;
+                        if (t2 !== null) {
+                            if (t2 < t1) t2 += 1440;
+                            if (t3 < t2) t3 += 1440;
+                        } else {
+                            if (t3 < t1) t3 += 1440;
+                        }
+                    } else {
+                        if (t3 < t0) t3 += 1440;
+                    }
+
+                    let total = t3 - t0;
+                    if (t1 !== null && t2 !== null) {
+                        const lunch = t2 - t1;
+                        total = total - lunch;
                     }
                     return Math.max(0, total);
                 }
@@ -1762,11 +1789,16 @@
 
                     if (todayEntry && todayEntry.startTime && todayEntry.lunchStartTime && todayEntry.lunchEndTime) {
                         const dailyGoalMinutes = this.getWorkloadForDate(this.state.settings, todayDateStr) * 60;
-                        const morningMinutes = TimeTrackerApp.timeToMinutes(todayEntry.lunchStartTime) - TimeTrackerApp.timeToMinutes(todayEntry.startTime);
+                        let t0 = TimeTrackerApp.timeToMinutes(todayEntry.startTime);
+                        let t1 = TimeTrackerApp.timeToMinutes(todayEntry.lunchStartTime);
+                        let t2 = TimeTrackerApp.timeToMinutes(todayEntry.lunchEndTime);
+                        if (t1 < t0) t1 += 1440;
+                        if (t2 < t1) t2 += 1440;
+                        const morningMinutes = t1 - t0;
                         const remainingMinutes = dailyGoalMinutes - morningMinutes;
-                        const exitMinutes = TimeTrackerApp.timeToMinutes(todayEntry.lunchEndTime) + remainingMinutes;
+                        const exitMinutes = t2 + remainingMinutes;
 
-                        this.dom.exitPredictionEl.textContent = TimeTrackerApp.formatMinutesToHHMM(exitMinutes);
+                        this.dom.exitPredictionEl.textContent = TimeTrackerApp.formatMinutesToHHMM((exitMinutes % 1440 + 1440) % 1440);
                         document.getElementById('exit-prediction-card').style.display = 'flex';
                     } else {
                         this.dom.exitPredictionEl.textContent = "--:--";
